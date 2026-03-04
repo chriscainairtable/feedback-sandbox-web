@@ -1099,6 +1099,7 @@ export default function App() {
         await updateRecord(PLANS_TABLE, planId, { 'Execute': true });
         setCheckedIds(new Set());
         setPushing(false);
+        handleRefresh();
     }
 
     async function handleRevert(plan) {
