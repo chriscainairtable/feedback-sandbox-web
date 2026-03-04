@@ -1105,7 +1105,7 @@ export default function App() {
         if (reverting) return;
         setReverting(plan.id);
         try {
-            await updateRecord(PLANS_TABLE, plan.id, { 'Revert': true });
+            await updateRecord(PLANS_TABLE, plan.id, { 'Revert': true, 'Plan Status': 'Reverting' });
             setRevertedIds(prev => {
                 const next = new Set([...prev, plan.id]);
                 // eslint-disable-next-line no-unused-vars
