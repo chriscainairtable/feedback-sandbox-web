@@ -848,7 +848,7 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                         <div
                             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: headerBg }}
                             onMouseEnter={e => {
-                                const summary = plan.fields['UI Change Summary'] || '';
+                                const summary = getFieldValue(plan.fields['UI Change Summary']) || '';
                                 if (!summary) return;
                                 const r = e.currentTarget.getBoundingClientRect();
                                 setPlanTooltip({ text: summary, x: r.right + 8, y: r.top });
