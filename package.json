@@ -7,7 +7,9 @@
     "dev": "vercel dev",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "sync": "node sync.js",
+    "sync:push": "node sync.js --push"
   },
   "dependencies": {
     "@sentry/node": "^10.40.0",

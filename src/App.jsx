@@ -90,6 +90,7 @@ const COLORS = {
     revertText: '#9a3412',
     revertBorder: '#fed7aa',
     revertHover: '#ffedd5',
+
 };
 
 const SIZES = {
@@ -128,6 +129,7 @@ const SIZES = {
 
     // Pills
     pillRadius: 999,
+
 };
 
 // Expose to window so snip context extraction can embed current design tokens
