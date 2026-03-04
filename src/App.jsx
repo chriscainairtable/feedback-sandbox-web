@@ -32,7 +32,7 @@ const COLORS = {
     socialProofStars: '#f59e0b',
 
     // CTA buttons
-    primary: '#2563eb',
+    primary: 'red',
     primaryHover: '#1d4ed8',
     primaryText: '#ffffff',
     secondary: '#ffffff',
@@ -983,7 +983,7 @@ function AcmeLandingCard() {
                     onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f9fafb'; }}
                     onMouseLeave={e => { e.currentTarget.style.backgroundColor = COLORS.secondary; }}
                 >
-                    Learn More
+                    LEARN MORE
                 </button>
             </div>
 
