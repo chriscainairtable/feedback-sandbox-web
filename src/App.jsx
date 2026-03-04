@@ -961,7 +961,7 @@ function AcmeLandingCard() {
                 <button
                     id="primary-button"
                     style={{
-                        flex: 1, backgroundColor: 'red', color: COLORS.primaryText,
+                        flex: 1, backgroundColor: COLORS.primary, color: COLORS.primaryText,
                         border: 'none', borderRadius: SIZES.buttonRadius,
                         paddingTop: SIZES.buttonPaddingY, paddingBottom: SIZES.buttonPaddingY,
                         paddingLeft: SIZES.buttonPaddingX, paddingRight: SIZES.buttonPaddingX,
