@@ -798,7 +798,7 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
     // Include 'New' plans only if they have linked items (stuck/queued bundles)
     const versionPlans = plans.filter(p => {
         const s = p.fields['Plan Status'] || '';
-        if (s === 'Executing' || s === 'Done' || s === 'Approved' || s === 'Failed' || s === 'Reverted') return true;
+        if (s === 'Executing' || s === 'Reverting' || s === 'Done' || s === 'Approved' || s === 'Failed' || s === 'Reverted') return true;
         if (s === 'New') {
             return allFeedback.some(r => matchesRecordId(r.fields['Version'], p.id));
         }
@@ -835,15 +835,16 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                 const status = plan.fields['Plan Status'] || '';
                 const planName = plan.fields['Plan Name'] || '';
                 const isExecuting = status === 'Executing';
+                const isReverting = status === 'Reverting';
                 const isDone = status === 'Done' || status === 'Approved';
                 const isQueued = status === 'New';
                 const isReverted = status === 'Reverted' || revertedIds.has(plan.id);
-                const canRevert = !isReverted && (revertablePlan?.id === plan.id || isQueued);
+                const canRevert = !isReverted && !isReverting && (revertablePlan?.id === plan.id || isQueued);
 
                 const items = allFeedback.filter(r => matchesRecordId(r.fields['Version'], plan.id));
-                const borderColor = isExecuting ? '#fde68a' : isDone ? '#bbf7d0' : isReverted ? '#e5e7eb' : isQueued ? '#e5e7eb' : '#fecaca';
-                const headerBg   = isExecuting ? '#fffbeb' : isDone ? '#f0fdf4' : isReverted ? '#f9fafb' : isQueued ? '#f9fafb' : '#fef2f2';
-                const badgeColor = isExecuting ? '#92400e' : isDone ? '#166534' : isReverted ? '#6b7280' : isQueued ? '#6b7280' : '#991b1b';
+                const borderColor = isExecuting || isReverting ? '#fde68a' : isDone ? '#bbf7d0' : isReverted ? '#e5e7eb' : isQueued ? '#e5e7eb' : '#fecaca';
+                const headerBg   = isExecuting || isReverting ? '#fffbeb' : isDone ? '#f0fdf4' : isReverted ? '#f9fafb' : isQueued ? '#f9fafb' : '#fef2f2';
+                const badgeColor = isExecuting || isReverting ? '#92400e' : isDone ? '#166534' : isReverted ? '#6b7280' : isQueued ? '#6b7280' : '#991b1b';
                 return (
                     <div key={plan.id} style={{ border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden' }}>
                         {/* Plan header row */}
@@ -859,7 +860,7 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                         >
                             <span className={isQueued ? 'badge-queued' : undefined}
                                 style={{ fontSize: 10, fontWeight: 700, color: badgeColor, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
-                                {isExecuting ? <>Applying<AnimatedDots /></> : isDone ? '✓ Done' : isReverted ? '↩ Reverted' : isQueued ? '● Queued' : '✗ Failed'}
+                                {isExecuting ? <>Applying<AnimatedDots /></> : isReverting ? <>Reverting<AnimatedDots /></> : isDone ? '✓ Done' : isReverted ? '↩ Reverted' : isQueued ? '● Queued' : '✗ Failed'}
                             </span>
                             <span style={{
                                 fontSize: 11, color: '#6b7280', flex: 1, minWidth: 0,
@@ -867,7 +868,7 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                             }}>
                                 {planName}
                             </span>
-                            {reverting === plan.id
+                            {reverting === plan.id || isReverting
                                 ? <span style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                     Reverting<AnimatedDots />
                                   </span>
@@ -1044,7 +1045,7 @@ export default function App() {
                 const res = await fetch('/api/version');
                 const { v } = await res.json();
                 if (currentVersion === null) { currentVersion = v; return; }
-                if (v !== currentVersion) window.location.reload();
+                if (v !== currentVersion) setTimeout(() => window.location.reload(), 2000);
             } catch (_) {}
         }
         const id = setInterval(checkVersion, 5000);
