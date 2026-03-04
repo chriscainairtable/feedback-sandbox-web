@@ -298,6 +298,7 @@ function FeedbackForm({ onCreated }) {
             'Extension Target': EXTENSION_TARGET,
             ...(priority ? { 'Priority': priority } : {}),
             ...(snipContext ? { 'Snip Context': JSON.stringify(snipContext) } : {}),
+            ...(snipPreview ? { 'Snip Preview': snipPreview } : {}),
         });
         setText(''); setPriority(null); setSubmitting(false); setJustSubmitted(true);
         setSnipMode(false); setSnipContext(null); setSnipPreview(null); setHoverInfo(null);
@@ -790,6 +791,19 @@ function OpenFeedbackList({ openFeedback, checkedIds, onToggle, onRefresh }) {
     );
 }
 
+// ─── Relative Time ─────────────────────────────────────────────────────────────
+
+function relativeTime(isoString) {
+    if (!isoString) return null;
+    const diff = Date.now() - new Date(isoString).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+}
+
 // ─── Versions List ─────────────────────────────────────────────────────────────
 
 function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) {
@@ -840,6 +854,12 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                 const isQueued = status === 'New';
                 const isReverted = status === 'Reverted' || revertedIds.has(plan.id);
                 const canRevert = !isReverted && !isReverting && (revertablePlan?.id === plan.id || isQueued);
+                const runUrl = plan.fields['GitHub Run URL'] || null;
+                const timeLabel = isExecuting
+                    ? relativeTime(plan.fields['Executing At']) || relativeTime(plan.createdTime)
+                    : (isDone || status === 'Failed')
+                        ? relativeTime(plan.fields['Done At']) || relativeTime(plan.createdTime)
+                        : relativeTime(plan.createdTime);
 
                 const items = allFeedback.filter(r => matchesRecordId(r.fields['Version'], plan.id));
                 const borderColor = isExecuting || isReverting ? '#fde68a' : isReverted ? '#e5e7eb' : isDone ? '#bbf7d0' : isQueued ? '#e5e7eb' : '#fecaca';
@@ -862,12 +882,26 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                                 style={{ fontSize: 10, fontWeight: 700, color: badgeColor, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
                                 {isExecuting ? <>Applying<AnimatedDots /></> : isReverting ? <>Reverting<AnimatedDots /></> : isReverted ? '↩ Reverted' : isDone ? '✓ Done' : isQueued ? '● Queued' : '✗ Failed'}
                             </span>
-                            <span style={{
-                                fontSize: 11, color: '#6b7280', flex: 1, minWidth: 0,
-                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>
-                                {planName}
-                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{
+                                    fontSize: 11, color: '#6b7280',
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}>
+                                    {planName}
+                                </div>
+                                {(timeLabel || runUrl) && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+                                        {timeLabel && <span style={{ fontSize: 10, color: '#9ca3af' }}>{timeLabel}</span>}
+                                        {runUrl && (
+                                            <a href={runUrl} target="_blank" rel="noreferrer"
+                                                style={{ fontSize: 10, color: '#9ca3af', textDecoration: 'none' }}
+                                                onMouseEnter={e => { e.currentTarget.style.color = '#6b7280'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}
+                                            >↗ Actions</a>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             {reverting === plan.id || isReverting
                                 ? <span style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                     Reverting<AnimatedDots />
