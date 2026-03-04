@@ -842,9 +842,9 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                 const canRevert = !isReverted && !isReverting && (revertablePlan?.id === plan.id || isQueued);
 
                 const items = allFeedback.filter(r => matchesRecordId(r.fields['Version'], plan.id));
-                const borderColor = isExecuting || isReverting ? '#fde68a' : isDone ? '#bbf7d0' : isReverted ? '#e5e7eb' : isQueued ? '#e5e7eb' : '#fecaca';
-                const headerBg   = isExecuting || isReverting ? '#fffbeb' : isDone ? '#f0fdf4' : isReverted ? '#f9fafb' : isQueued ? '#f9fafb' : '#fef2f2';
-                const badgeColor = isExecuting || isReverting ? '#92400e' : isDone ? '#166534' : isReverted ? '#6b7280' : isQueued ? '#6b7280' : '#991b1b';
+                const borderColor = isExecuting || isReverting ? '#fde68a' : isReverted ? '#e5e7eb' : isDone ? '#bbf7d0' : isQueued ? '#e5e7eb' : '#fecaca';
+                const headerBg   = isExecuting || isReverting ? '#fffbeb' : isReverted ? '#f9fafb' : isDone ? '#f0fdf4' : isQueued ? '#f9fafb' : '#fef2f2';
+                const badgeColor = isExecuting || isReverting ? '#92400e' : isReverted ? '#6b7280' : isDone ? '#166534' : isQueued ? '#6b7280' : '#991b1b';
                 return (
                     <div key={plan.id} style={{ border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden' }}>
                         {/* Plan header row */}
@@ -860,7 +860,7 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                         >
                             <span className={isQueued ? 'badge-queued' : undefined}
                                 style={{ fontSize: 10, fontWeight: 700, color: badgeColor, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
-                                {isExecuting ? <>Applying<AnimatedDots /></> : isReverting ? <>Reverting<AnimatedDots /></> : isDone ? '✓ Done' : isReverted ? '↩ Reverted' : isQueued ? '● Queued' : '✗ Failed'}
+                                {isExecuting ? <>Applying<AnimatedDots /></> : isReverting ? <>Reverting<AnimatedDots /></> : isReverted ? '↩ Reverted' : isDone ? '✓ Done' : isQueued ? '● Queued' : '✗ Failed'}
                             </span>
                             <span style={{
                                 fontSize: 11, color: '#6b7280', flex: 1, minWidth: 0,
