@@ -1036,7 +1036,7 @@ export default function App() {
         return () => { cancelled = true; clearInterval(id); };
     }, []);
 
-    const sortedPlans = [...allPlans].sort((a, b) => b.id.localeCompare(a.id));
+    const sortedPlans = [...allPlans].sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
     const executingPlan = sortedPlans.find(p => (p.fields['Plan Status'] || '') === 'Executing') || null;
 
     // Only show items that haven't been linked to a plan yet
