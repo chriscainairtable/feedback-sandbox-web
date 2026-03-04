@@ -1036,6 +1036,21 @@ export default function App() {
         return () => { cancelled = true; clearInterval(id); };
     }, []);
 
+    // Auto-reload when Vercel deploys a new version
+    useEffect(() => {
+        let currentVersion = null;
+        async function checkVersion() {
+            try {
+                const res = await fetch('/api/version');
+                const { v } = await res.json();
+                if (currentVersion === null) { currentVersion = v; return; }
+                if (v !== currentVersion) window.location.reload();
+            } catch (_) {}
+        }
+        const id = setInterval(checkVersion, 5000);
+        return () => clearInterval(id);
+    }, []);
+
     const sortedPlans = [...allPlans].sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
     const executingPlan = sortedPlans.find(p => (p.fields['Plan Status'] || '') === 'Executing') || null;
 
