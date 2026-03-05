@@ -136,6 +136,10 @@ const SIZES = {
 window.__COLORS__ = COLORS;
 window.__SIZES__ = SIZES;
 
+const SESSION_ID = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+
 // ─── Animated Dots ─────────────────────────────────────────────────────────────
 
 function AnimatedDots() {
@@ -195,7 +199,7 @@ function FeedbackForm({ onCreated }) {
     const snipTargetRef = useRef(null);
     const hoveredElement = useRef(null);
 
-    const canSubmit = !submitting && text.trim().length > 0 && priority !== null;
+    const canSubmit = !submitting && text.trim().length > 0;
 
     useEffect(() => {
         if (!snipMode) return;
@@ -296,6 +300,12 @@ function FeedbackForm({ onCreated }) {
             'Feedback Text': text.trim(),
             'Status': 'New',
             'Extension Target': EXTENSION_TARGET,
+            'Source': 'web',
+            'Interface URL': window.location.href,
+            'User Agent': navigator.userAgent,
+            'Viewport': `${window.innerWidth}x${window.innerHeight}`,
+            'Base ID': import.meta.env.VITE_BASE_ID || '',
+            'Session ID': SESSION_ID,
             ...(priority ? { 'Priority': priority } : {}),
             ...(snipContext ? { 'Snip Context': JSON.stringify(snipContext) } : {}),
             ...(snipPreview ? { 'Snip Preview': snipPreview } : {}),
@@ -404,10 +414,10 @@ function FeedbackForm({ onCreated }) {
                     {/* Row 1: Priority label + pills */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <span style={{
-                            fontSize: 10, fontWeight: 700, color: priority ? COLORS.sectionSubText : '#ef4444',
+                            fontSize: 10, fontWeight: 700, color: COLORS.sectionSubText,
                             letterSpacing: '0.05em', textTransform: 'uppercase',
                         }}>
-                            Priority *
+                            Priority
                         </span>
                         <div style={{ display: 'flex', gap: 5 }}>
                             {['Low', 'Medium', 'High'].map(p => {
@@ -951,6 +961,16 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                                         </div>
                                     );
                                 })}
+                            </div>
+                        )}
+                        {/* Execution Log — live progress, only while executing */}
+                        {isExecuting && !!(plan.fields['Execution Log']) && (
+                            <div style={{ borderTop: '1px solid #fde68a', padding: '5px 10px 6px', backgroundColor: '#fffbeb' }}>
+                                <pre style={{
+                                    margin: 0, fontSize: 10, fontFamily: 'ui-monospace, monospace',
+                                    color: '#78350f', lineHeight: 1.5, whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word', maxHeight: 80, overflowY: 'auto',
+                                }}>{plan.fields['Execution Log']}</pre>
                             </div>
                         )}
                     </div>
