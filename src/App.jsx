@@ -91,6 +91,16 @@ const COLORS = {
     revertBorder: '#fed7aa',
     revertHover: '#ffedd5',
 
+    // Walmart Roadmap canvas
+    walmartBlue: '#0071CE',
+    walmartYellow: '#FFC220',
+    roadmapBg: '#f8f9fa',
+    roadmapHeaderBg: '#0071CE',
+    roadmapBarGreen: '#16a34a',
+    roadmapBarGrey: '#9ca3af',
+    roadmapText: '#111827',
+    roadmapMuted: '#6b7280',
+
 };
 
 const SIZES = {
@@ -129,6 +139,12 @@ const SIZES = {
 
     // Pills
     pillRadius: 999,
+
+    // Walmart Roadmap canvas
+    roadmapLeftColWidth: 240,
+    roadmapRowHeight: 48,
+    roadmapBarHeight: 28,
+    roadmapBarRadius: 4,
 
 };
 
@@ -1033,6 +1049,261 @@ function AcmeLandingCard() {
                 <span style={{ color: COLORS.socialProofStars }}>★★★★★</span>
                 {' '}Loved by 10,000 teams
             </p>
+        </div>
+    );
+}
+
+// ─── Walmart Spark SVG ─────────────────────────────────────────────────────────
+
+function WalmartSpark() {
+    return (
+        <svg width="28" height="28" viewBox="0 0 532.262 600" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#FFC220" d="M375.663,273.363c12.505-2.575,123.146-53.269,133.021-58.97c22.547-13.017,30.271-41.847,17.254-64.393s-41.847-30.271-64.393-17.254c-9.876,5.702-109.099,76.172-117.581,85.715c-9.721,10.937-11.402,26.579-4.211,39.033C346.945,269.949,361.331,276.314,375.663,273.363z"/>
+            <path fill="#FFC220" d="M508.685,385.607c-9.876-5.702-120.516-56.396-133.021-58.97c-14.332-2.951-28.719,3.415-35.909,15.87c-7.191,12.455-5.51,28.097,4.211,39.033c8.482,9.542,107.705,80.013,117.581,85.715c22.546,13.017,51.376,5.292,64.393-17.254S531.231,398.624,508.685,385.607z"/>
+            <path fill="#FFC220" d="M266.131,385.012c-14.382,0-27.088,9.276-31.698,23.164c-4.023,12.117-15.441,133.282-15.441,144.685c0,26.034,21.105,47.139,47.139,47.139c26.034,0,47.139-21.105,47.139-47.139c0-11.403-11.418-132.568-15.441-144.685C293.219,394.288,280.513,385.012,266.131,385.012z"/>
+            <path fill="#FFC220" d="M156.599,326.637c-12.505,2.575-123.146,53.269-133.021,58.97C1.031,398.624-6.694,427.454,6.323,450c13.017,22.546,41.847,30.271,64.393,17.254c9.876-5.702,109.098-76.172,117.58-85.715c9.722-10.937,11.402-26.579,4.211-39.033S170.931,323.686,156.599,326.637z"/>
+            <path fill="#FFC220" d="M70.717,132.746C48.171,119.729,19.341,127.454,6.323,150c-13.017,22.546-5.292,51.376,17.254,64.393c9.876,5.702,120.517,56.396,133.021,58.97c14.332,2.951,28.719-3.415,35.91-15.87c7.191-12.455,5.51-28.096-4.211-39.033C179.815,208.918,80.592,138.447,70.717,132.746z"/>
+            <path fill="#FFC220" d="M266.131,0c-26.035,0-47.139,21.105-47.139,47.139c0,11.403,11.418,132.568,15.441,144.685c4.611,13.888,17.317,23.164,31.698,23.164s27.088-9.276,31.698-23.164c4.023-12.117,15.441-133.282,15.441-144.685C313.27,21.105,292.165,0,266.131,0z"/>
+        </svg>
+    );
+}
+
+// ─── Status Badge ───────────────────────────────────────────────────────────────
+
+function StatusBadge({ label, color }) {
+    const colors = {
+        green:  { bg: '#dcfce7', text: '#166534', border: '#86efac' },
+        grey:   { bg: '#f3f4f6', text: '#374151', border: '#d1d5db' },
+        yellow: { bg: '#fef9c3', text: '#854d0e', border: '#fde047' },
+        blue:   { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' },
+    };
+    const c = colors[color] || colors.grey;
+    return (
+        <span style={{
+            fontSize: 10, fontWeight: 700, borderRadius: 4,
+            backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}`,
+            padding: '2px 6px', whiteSpace: 'nowrap',
+        }}>
+            {label}
+        </span>
+    );
+}
+
+// ─── Walmart Roadmap Card ───────────────────────────────────────────────────────
+
+function WalmartRoadmapCard() {
+    const [detailBar, setDetailBar] = useState(null);
+    const quarters = ['FY27 Q1', 'FY27 Q2', 'FY27 Q3', 'FY27 Q4', 'FY28 Q1', 'FY28 Q2'];
+    const qw = 100 / 6;
+
+    const marketFilters = ['All', 'Walmart US', "Sam's Club", 'International'];
+
+    function TimelineRow({ id, left, width, color, dashed, badge, badgeColor, label, subLabel, onEnter }) {
+        return (
+            <div
+                id={id}
+                onMouseEnter={onEnter}
+                onMouseLeave={() => setDetailBar(null)}
+                style={{
+                    position: 'absolute',
+                    left: `${left}%`, width: `${width}%`,
+                    top: '50%', transform: 'translateY(-50%)',
+                    height: SIZES.roadmapBarHeight,
+                    backgroundColor: dashed ? 'transparent' : color,
+                    border: dashed ? `2px dashed ${COLORS.roadmapBarGrey}` : 'none',
+                    borderRadius: SIZES.roadmapBarRadius,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '0 8px', cursor: 'default', overflow: 'hidden', boxSizing: 'border-box',
+                }}
+            >
+                {badge && <StatusBadge label={badge} color={badgeColor || 'grey'} />}
+                <span style={{ fontSize: 12, fontWeight: 500, color: dashed ? '#6b7280' : '#ffffff', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                {subLabel && <span style={{ fontSize: 11, color: dashed ? '#9ca3af' : 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', flexShrink: 0 }}>{subLabel}</span>}
+            </div>
+        );
+    }
+
+    function InitiativeRow({ leftContent, timelineContent, isHeader }) {
+        return (
+            <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', backgroundColor: isHeader ? '#f9fafb' : '#ffffff' }}>
+                <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0 }}>{leftContent}</div>
+                <div style={{ flex: 1, position: 'relative', height: SIZES.roadmapRowHeight }}>{timelineContent}</div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ width: '100%', height: '100%', backgroundColor: COLORS.roadmapBg, overflow: 'auto', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+
+            {/* Hover detail card */}
+            {detailBar && createPortal(
+                <div id="roadmap-detail-card" style={{
+                    position: 'fixed', left: detailBar.x, top: detailBar.y + detailBar.h + 6,
+                    zIndex: 10000, backgroundColor: '#ffffff', border: '1px solid #e5e7eb',
+                    borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                    padding: 16, width: 280, fontSize: 12, color: '#374151', pointerEvents: 'none',
+                }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#111827', marginBottom: 8 }}>Dynamic Routing ML Model</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div><span style={{ color: '#9ca3af' }}>Primary Initiative: </span>Modernize Replenishment Planning, Order Management and Inventory systems</div>
+                        <div><span style={{ color: '#9ca3af' }}>Primary Product Owners: </span>None</div>
+                        <div><span style={{ color: '#9ca3af' }}>Dependencies: </span>—</div>
+                        <div><span style={{ color: '#9ca3af' }}>Dependent Team Count: </span>—</div>
+                    </div>
+                    <div style={{ marginTop: 10 }}><StatusBadge label="Develop (Committed)" color="green" /></div>
+                </div>,
+                document.body
+            )}
+
+            {/* Header bar */}
+            <div id="roadmap-header" style={{
+                backgroundColor: COLORS.roadmapHeaderBg, height: 56, padding: '0 24px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                    <WalmartSpark />
+                    <span style={{ fontSize: 18, fontWeight: 700, color: '#ffffff', marginLeft: 10 }}>Product Hub</span>
+                    <div style={{ display: 'flex', gap: 6, marginLeft: 24 }}>
+                        <button style={{ background: 'none', border: '1px solid rgba(255,255,255,0.5)', color: '#ffffff', borderRadius: 6, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Home</button>
+                        <button style={{ background: '#ffffff', border: 'none', color: COLORS.walmartBlue, borderRadius: 6, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Roadmap</button>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                    {marketFilters.map((f, i) => (
+                        <button key={f} style={{
+                            backgroundColor: i === 0 ? COLORS.walmartYellow : 'transparent',
+                            color: i === 0 ? '#000000' : '#ffffff',
+                            border: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.5)',
+                            borderRadius: 999, padding: '4px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        }}>{f}</button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Sub-header */}
+            <div id="roadmap-subheader" style={{
+                backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb',
+                padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+                <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
+                    <span style={{ fontSize: 13, color: '#9ca3af', paddingBottom: 4, cursor: 'pointer' }}>Strategic</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#111827', borderBottom: '2px solid #0071CE', paddingBottom: 4, cursor: 'pointer' }}>Execution</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                    <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: '#374151' }}>Products</button>
+                    <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: '#374151' }}>Collapse All</button>
+                </div>
+            </div>
+
+            {/* Timeline header */}
+            <div id="roadmap-timeline-header" style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex' }}>
+                <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '8px 24px', fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.06em' }}>INITIATIVE</div>
+                <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
+                    {quarters.map(q => (
+                        <div key={q} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#6b7280', fontWeight: 600, padding: '8px 0' }}>{q}</div>
+                    ))}
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, backgroundColor: COLORS.walmartBlue }} />
+                </div>
+            </div>
+
+            {/* Initiative Row 1 */}
+            <div id="initiative-row-1">
+                {/* Group header */}
+                <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '12px 24px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
+                        ▼ Modernize Replenishment Planning, Order Management and Inventory systems
+                    </div>
+                    <div style={{ flex: 1 }} />
+                </div>
+                {/* Sub-row 1a */}
+                <InitiativeRow
+                    leftContent={
+                        <div style={{ padding: '6px 24px 6px 40px', fontSize: 12, color: '#374151' }}>
+                            <div style={{ marginBottom: 2 }}>ENB-0388 : Enable inventory management modernizations with near-real-time inventory with Enterprise Inventory.</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
+                        </div>
+                    }
+                    timelineContent={
+                        <TimelineRow
+                            id="bar-dynamic-routing"
+                            left={0} width={qw * 3}
+                            color={COLORS.roadmapBarGreen}
+                            badge="Develop (Committed)" badgeColor="green"
+                            label="Dynamic Routing ML Model" subLabel="L - 3 Quarters"
+                            onEnter={e => {
+                                const r = e.currentTarget.getBoundingClientRect();
+                                setDetailBar({ x: r.left, y: r.top, h: r.height });
+                            }}
+                        />
+                    }
+                />
+                {/* Sub-row 1b */}
+                <InitiativeRow
+                    leftContent={
+                        <div style={{ padding: '6px 24px 6px 40px', fontSize: 12, color: '#374151' }}>
+                            <div style={{ marginBottom: 2 }}>ENB-0393 : PO Modernization through Order Central and SPIRE</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
+                        </div>
+                    }
+                    timelineContent={
+                        <TimelineRow
+                            left={qw * 2} width={qw}
+                            color={COLORS.roadmapBarGrey}
+                            label="Perishable Market" subLabel="L - 12 wks"
+                        />
+                    }
+                />
+                {/* Sub-row 1c */}
+                <InitiativeRow
+                    leftContent={
+                        <div style={{ padding: '6px 24px 6px 40px', fontSize: 12, color: '#374151' }}>
+                            <div style={{ marginBottom: 2 }}>No Project</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
+                        </div>
+                    }
+                    timelineContent={null}
+                />
+            </div>
+
+            {/* Initiative Row 2 */}
+            <div id="initiative-row-2">
+                <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '12px 24px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
+                        ▼ 1-Click automated setup of entire supplier catalogs
+                    </div>
+                    <div style={{ flex: 1 }} />
+                </div>
+                <InitiativeRow
+                    leftContent={
+                        <div style={{ padding: '6px 24px 6px 40px', fontSize: 12, color: '#374151' }}>
+                            <div style={{ marginBottom: 2 }}>No Project</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
+                        </div>
+                    }
+                    timelineContent={
+                        <TimelineRow
+                            id="bar-supplier-setup"
+                            left={0} width={qw}
+                            color="transparent" dashed
+                            badge="Backlog" badgeColor="grey"
+                            label="Solving all Transp…"
+                        />
+                    }
+                />
+            </div>
+
+            {/* Initiative Row 3 */}
+            <div id="initiative-row-3">
+                <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '12px 24px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
+                        ▼ Transform - Associate Intelligence
+                    </div>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        <div style={{ position: 'absolute', left: '8%', right: '8%', top: '50%', transform: 'translateY(-50%)', height: 1, borderTop: '1px dashed #e5e7eb' }} />
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 }
