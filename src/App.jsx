@@ -828,6 +828,12 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                 padding: '10px 12px', pointerEvents: 'none',
             }}>
                 {planTooltip.text}
+                {planTooltip.execLog && (
+                    <pre style={{
+                        margin: 0, fontSize: 10, whiteSpace: 'pre-wrap',
+                        color: '#9ca3af', marginTop: 6, maxHeight: 120, overflowY: 'auto',
+                    }}>{planTooltip.execLog}</pre>
+                )}
             </div>,
             document.body
         )}
@@ -859,9 +865,10 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: headerBg }}
                             onMouseEnter={e => {
                                 const summary = getFieldValue(plan.fields['UI Change Summary']) || '';
-                                if (!summary) return;
+                                const execLog = (isExecuting || isReverting) ? (plan.fields['Execution Log'] || '') : '';
+                                if (!summary && !execLog) return;
                                 const r = e.currentTarget.getBoundingClientRect();
-                                setPlanTooltip({ text: summary, x: r.right + 8, y: r.top });
+                                setPlanTooltip({ text: summary, execLog, x: r.right + 8, y: r.top });
                             }}
                             onMouseLeave={() => setPlanTooltip(null)}
                         >
