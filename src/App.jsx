@@ -1790,49 +1790,54 @@ export default function App() {
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
                                             {/* Action type pills */}
-                                            {checkedIds.size > 0 && (
-                                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                                                    {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary', 'Parse List'].map(action => {
-                                                        const active = selectedAction === action;
-                                                        return (
-                                                            <button
-                                                                key={action}
-                                                                onClick={() => setSelectedAction(action)}
-                                                                title={ACTION_TOOLTIPS[action]}
-                                                                style={{
-                                                                    fontSize: 11, fontWeight: active ? 600 : 500,
-                                                                    backgroundColor: active ? '#111827' : '#f9fafb',
-                                                                    color: active ? '#ffffff' : '#374151',
-                                                                    border: `1px solid ${active ? '#111827' : '#d1d5db'}`,
-                                                                    borderRadius: 999, padding: '3px 10px',
-                                                                    cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
-                                                                }}
-                                                            >
-                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : action === 'Parse List' ? '📧 ' : '✉ '}
-                                                                {action}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+                                            {/* Action type pills — always visible */}
+                                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                                                {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary', 'Parse List'].map(action => {
+                                                    const active = selectedAction === action;
+                                                    return (
+                                                        <button
+                                                            key={action}
+                                                            onClick={() => setSelectedAction(action)}
+                                                            title={ACTION_TOOLTIPS[action]}
+                                                            style={{
+                                                                fontSize: 11, fontWeight: active ? 600 : 500,
+                                                                backgroundColor: active ? '#111827' : '#f9fafb',
+                                                                color: active ? '#ffffff' : '#374151',
+                                                                border: `1px solid ${active ? '#111827' : '#d1d5db'}`,
+                                                                borderRadius: 999, padding: '3px 10px',
+                                                                cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : action === 'Parse List' ? '📧 ' : '✉ '}
+                                                            {action}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                             {/* Push button */}
-                                            <button
-                                                id="push-plan-button"
-                                                onClick={() => selectedAction === 'Parse List' ? setParseModalOpen(true) : handlePushPlan()}
-                                                disabled={checkedIds.size === 0 || pushing}
-                                                style={{
-                                                    backgroundColor: (checkedIds.size > 0 && !pushing) ? actionColor.bg : COLORS.pushPlanDisabledBg,
-                                                    color: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanText : COLORS.pushPlanDisabledText,
-                                                    border: 'none', borderRadius: SIZES.inputRadius,
-                                                    padding: '8px 14px', fontSize: 13, fontWeight: 600,
-                                                    cursor: (checkedIds.size > 0 && !pushing) ? 'pointer' : 'not-allowed',
-                                                    whiteSpace: 'nowrap', transition: 'background-color 0.12s', width: '100%',
-                                                }}
-                                                onMouseEnter={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = actionColor.hover; }}
-                                                onMouseLeave={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = actionColor.bg; }}
-                                            >
-                                                {pushing ? 'Pushing…' : `Push — ${selectedAction}`}
-                                            </button>
+                                            {(() => {
+                                                const parseList = selectedAction === 'Parse List';
+                                                const canAct = parseList || (checkedIds.size > 0 && !pushing);
+                                                return (
+                                                    <button
+                                                        id="push-plan-button"
+                                                        onClick={() => parseList ? setParseModalOpen(true) : handlePushPlan()}
+                                                        disabled={!canAct}
+                                                        style={{
+                                                            backgroundColor: canAct ? actionColor.bg : COLORS.pushPlanDisabledBg,
+                                                            color: canAct ? COLORS.pushPlanText : COLORS.pushPlanDisabledText,
+                                                            border: 'none', borderRadius: SIZES.inputRadius,
+                                                            padding: '8px 14px', fontSize: 13, fontWeight: 600,
+                                                            cursor: canAct ? 'pointer' : 'not-allowed',
+                                                            whiteSpace: 'nowrap', transition: 'background-color 0.12s', width: '100%',
+                                                        }}
+                                                        onMouseEnter={e => { if (canAct) e.currentTarget.style.backgroundColor = actionColor.hover; }}
+                                                        onMouseLeave={e => { if (canAct) e.currentTarget.style.backgroundColor = actionColor.bg; }}
+                                                    >
+                                                        {pushing ? 'Pushing…' : `Push — ${selectedAction}`}
+                                                    </button>
+                                                );
+                                            })()}
                                         </div>
                                     )}
                                 </div>
