@@ -1419,6 +1419,7 @@ function StatusBadge({ label, color }) {
 
 function WalmartRoadmapCard() {
     const [detailBar, setDetailBar] = useState(null);
+    const [showDemo, setShowDemo] = useState(true);
     const quarters = ['FY27 Q1', 'FY27 Q2', 'FY27 Q3', 'FY27 Q4', 'FY28 Q1', 'FY28 Q2'];
     const qw = 100 / 6;
     const todayPct = qw * 1.35; // ~mid Q2
@@ -1466,6 +1467,70 @@ function WalmartRoadmapCard() {
     return (
         <div style={{ width: '100%', height: '100%', backgroundColor: COLORS.roadmapBg, overflow: 'auto', fontFamily: 'ui-sans-serif, system-ui, sans-serif', minWidth: 900, paddingBottom: 80, boxSizing: 'border-box' }}>
 
+            {/* Demo mode lightbox */}
+            {showDemo && createPortal(
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 20000,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                }}>
+                    <div style={{
+                        backgroundColor: '#ffffff', borderRadius: 16,
+                        boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
+                        width: 520, padding: '40px 44px', position: 'relative',
+                    }}>
+                        {/* Walmart spark + wordmark */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                            <WalmartSpark size={28} />
+                            <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.walmartBlue, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Airtable × Walmart</span>
+                        </div>
+
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#111827', lineHeight: 1.2, marginBottom: 10 }}>
+                            Live UI Feedback Loop
+                        </div>
+                        <div style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 28 }}>
+                            This Product Hub roadmap is a live Airtable interface. Stakeholders flag visual and UX issues directly against what they see — no tickets, no meetings — and changes go to production in minutes.
+                        </div>
+
+                        {/* Steps */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 32 }}>
+                            {[
+                                { icon: '💬', step: 'Capture', desc: 'Use the feedback button to flag anything on the canvas — colors, labels, layout, data.' },
+                                { icon: '📋', step: 'Queue & Push', desc: 'Bundle items into a plan. Save for review or push directly — triggers Claude Code via GitHub Actions.' },
+                                { icon: '⚡', step: 'Live in seconds', desc: 'Changes are applied to the interface, block released, and web twin deployed automatically. Revert anytime.' },
+                            ].map(({ icon, step, desc }) => (
+                                <div key={step} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                                    <div style={{
+                                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                                        backgroundColor: '#f0f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 16,
+                                    }}>{icon}</div>
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{step}</div>
+                                        <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>{desc}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setShowDemo(false)}
+                            style={{
+                                width: '100%', padding: '12px 0', borderRadius: 8, border: 'none',
+                                backgroundColor: COLORS.walmartBlue, color: '#ffffff',
+                                fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#005ba1'; }}
+                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = COLORS.walmartBlue; }}
+                        >
+                            Got it — show me the roadmap
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* Hover detail card */}
             {detailBar && createPortal(
                 <div id="roadmap-detail-card" style={{
@@ -1499,7 +1564,18 @@ function WalmartRoadmapCard() {
                         <button style={{ background: '#ffffff', border: 'none', color: COLORS.walmartBlue, borderRadius: 6, padding: '5px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Roadmap</button>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button
+                        onClick={() => setShowDemo(true)}
+                        title="About this demo"
+                        style={{
+                            width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.4)',
+                            background: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >?</button>
                     {['All', 'Walmart US', "Sam's Club", 'International'].map((f, i) => (
                         <button key={f} style={{
                             backgroundColor: i === 0 ? COLORS.walmartYellow : 'transparent',
