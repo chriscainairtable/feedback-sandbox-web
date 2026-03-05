@@ -103,14 +103,6 @@ const COLORS = {
     roadmapText: '#111827',
     roadmapMuted: '#6b7280',
 
-    // Walmart Roadmap canvas — dark mode variants
-    roadmapDarkBg: '#0f172a',
-    roadmapDarkCard: '#1e293b',
-    roadmapDarkBorder: '#334155',
-    roadmapDarkText: '#f1f5f9',
-    roadmapDarkSubText: '#94a3b8',
-    roadmapDarkMuted: '#64748b',
-
 };
 
 const SIZES = {
@@ -1153,32 +1145,9 @@ function StatusBadge({ label, color }) {
 
 function WalmartRoadmapCard() {
     const [detailBar, setDetailBar] = useState(null);
-    const [darkMode, setDarkMode] = useState(false);
     const quarters = ['FY27 Q1', 'FY27 Q2', 'FY27 Q3', 'FY27 Q4', 'FY28 Q1', 'FY28 Q2'];
     const qw = 100 / 6;
     const todayPct = qw * 1.35; // ~mid Q2
-
-    const theme = darkMode ? {
-        bg: COLORS.roadmapDarkBg,
-        card: COLORS.roadmapDarkCard,
-        border: COLORS.roadmapDarkBorder,
-        text: COLORS.roadmapDarkText,
-        subText: COLORS.roadmapDarkSubText,
-        muted: COLORS.roadmapDarkMuted,
-        rowGroupBg: COLORS.roadmapDarkBg,
-        timelineHeaderBg: COLORS.roadmapDarkCard,
-        gridLine: COLORS.roadmapDarkBorder,
-    } : {
-        bg: COLORS.roadmapBg,
-        card: '#ffffff',
-        border: '#e5e7eb',
-        text: COLORS.roadmapText,
-        subText: '#374151',
-        muted: COLORS.roadmapMuted,
-        rowGroupBg: '#f9fafb',
-        timelineHeaderBg: '#f9fafb',
-        gridLine: '#f3f4f6',
-    };
 
     function TimelineRow({ id, left, width, color, dashed, badge, badgeColor, label, subLabel, onEnter }) {
         return (
@@ -1199,19 +1168,19 @@ function WalmartRoadmapCard() {
                 }}
             >
                 {badge && <StatusBadge label={badge} color={badgeColor || 'grey'} />}
-                <span style={{ fontSize: 12, fontWeight: 500, color: dashed ? theme.muted : '#ffffff', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-                {subLabel && <span style={{ fontSize: 11, color: dashed ? theme.subText : 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', flexShrink: 0 }}>{subLabel}</span>}
+                <span style={{ fontSize: 12, fontWeight: 500, color: dashed ? '#6b7280' : '#ffffff', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                {subLabel && <span style={{ fontSize: 11, color: dashed ? '#9ca3af' : 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', flexShrink: 0 }}>{subLabel}</span>}
             </div>
         );
     }
 
     function InitiativeRow({ leftContent, timelineContent }) {
         return (
-            <div style={{ display: 'flex', borderBottom: `1px solid ${theme.gridLine}`, backgroundColor: theme.card, minHeight: SIZES.roadmapRowHeight }}>
-                <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, borderRight: `1px solid ${theme.border}` }}>{leftContent}</div>
+            <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', backgroundColor: '#ffffff', minHeight: SIZES.roadmapRowHeight }}>
+                <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, borderRight: '1px solid #e5e7eb' }}>{leftContent}</div>
                 <div style={{ flex: 1, position: 'relative' }}>
                     {[1,2,3,4,5].map(i => (
-                        <div key={i} style={{ position: 'absolute', left: `${qw * i}%`, top: 0, bottom: 0, width: 1, backgroundColor: theme.gridLine, pointerEvents: 'none' }} />
+                        <div key={i} style={{ position: 'absolute', left: `${qw * i}%`, top: 0, bottom: 0, width: 1, backgroundColor: '#f3f4f6', pointerEvents: 'none' }} />
                     ))}
                     <div style={{ position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0, width: 2, backgroundColor: 'rgba(0,113,206,0.25)', pointerEvents: 'none', zIndex: 1 }} />
                     {timelineContent}
@@ -1221,22 +1190,22 @@ function WalmartRoadmapCard() {
     }
 
     return (
-        <div style={{ width: '100%', height: '100%', backgroundColor: theme.bg, overflow: 'auto', fontFamily: 'ui-sans-serif, system-ui, sans-serif', minWidth: 900, paddingBottom: 80, boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', height: '100%', backgroundColor: COLORS.roadmapBg, overflow: 'auto', fontFamily: 'ui-sans-serif, system-ui, sans-serif', minWidth: 900, paddingBottom: 80, boxSizing: 'border-box' }}>
 
             {/* Hover detail card */}
             {detailBar && createPortal(
                 <div id="roadmap-detail-card" style={{
                     position: 'fixed', left: detailBar.x, top: detailBar.y + detailBar.h + 6,
-                    zIndex: 10000, backgroundColor: theme.card, border: `1px solid ${theme.border}`,
+                    zIndex: 10000, backgroundColor: '#ffffff', border: '1px solid #e5e7eb',
                     borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                    padding: 16, width: 280, fontSize: 12, color: theme.subText, pointerEvents: 'none',
+                    padding: 16, width: 280, fontSize: 12, color: '#374151', pointerEvents: 'none',
                 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: theme.text, marginBottom: 8 }}>Dynamic Routing ML Model</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#111827', marginBottom: 8 }}>Dynamic Routing ML Model</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div><span style={{ color: theme.muted }}>Primary Initiative: </span>Modernize Replenishment Planning, Order Management and Inventory systems</div>
-                        <div><span style={{ color: theme.muted }}>Primary Product Owners: </span>Daniel Walsh, Priya Nair</div>
-                        <div><span style={{ color: theme.muted }}>Dependencies: </span>ENB-0393</div>
-                        <div><span style={{ color: theme.muted }}>Dependent Team Count: </span>3</div>
+                        <div><span style={{ color: '#9ca3af' }}>Primary Initiative: </span>Modernize Replenishment Planning, Order Management and Inventory systems</div>
+                        <div><span style={{ color: '#9ca3af' }}>Primary Product Owners: </span>Daniel Walsh, Priya Nair</div>
+                        <div><span style={{ color: '#9ca3af' }}>Dependencies: </span>ENB-0393</div>
+                        <div><span style={{ color: '#9ca3af' }}>Dependent Team Count: </span>3</div>
                     </div>
                     <div style={{ marginTop: 10 }}><StatusBadge label="Develop (Committed)" color="green" /></div>
                 </div>,
@@ -1256,7 +1225,7 @@ function WalmartRoadmapCard() {
                         <button style={{ background: '#ffffff', border: 'none', color: COLORS.walmartBlue, borderRadius: 6, padding: '5px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Roadmap</button>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
                     {['All', 'Walmart US', "Sam's Club", 'International'].map((f, i) => (
                         <button key={f} style={{
                             backgroundColor: i === 0 ? COLORS.walmartYellow : 'transparent',
@@ -1265,59 +1234,50 @@ function WalmartRoadmapCard() {
                             borderRadius: 999, padding: '4px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                         }}>{f}</button>
                     ))}
-                    <button
-                        onClick={() => setDarkMode(d => !d)}
-                        title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                        style={{
-                            background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.4)',
-                            borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 15, lineHeight: 1,
-                            color: '#ffffff', marginLeft: 4,
-                        }}
-                    >{darkMode ? '\u2600\ufe0f' : '\ud83c\udf19'}</button>
                 </div>
             </div>
 
             {/* Sub-header tabs */}
             <div id="roadmap-subheader" style={{
-                backgroundColor: theme.card, borderBottom: `1px solid ${theme.border}`,
+                backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb',
                 padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
                 <div style={{ display: 'flex', gap: 24 }}>
-                    <button style={{ fontSize: 13, color: theme.muted, padding: '12px 0', background: 'none', border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer' }}>Strategic</button>
-                    <button style={{ fontSize: 13, fontWeight: 700, color: theme.text, padding: '12px 0', background: 'none', border: 'none', borderBottom: `2px solid ${COLORS.walmartBlue}`, cursor: 'pointer' }}>Execution</button>
+                    <button style={{ fontSize: 13, color: '#9ca3af', padding: '12px 0', background: 'none', border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer' }}>Strategic</button>
+                    <button style={{ fontSize: 13, fontWeight: 700, color: '#111827', padding: '12px 0', background: 'none', border: 'none', borderBottom: `2px solid ${COLORS.walmartBlue}`, cursor: 'pointer' }}>Execution</button>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    <button style={{ fontSize: 12, border: `1px solid ${theme.border}`, borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: theme.subText }}>Products</button>
-                    <button style={{ fontSize: 12, border: `1px solid ${theme.border}`, borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: theme.subText }}>Collapse All</button>
+                    <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: '#374151' }}>Products</button>
+                    <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: '#374151' }}>Collapse All</button>
                 </div>
             </div>
 
             {/* Filter bar */}
             <div id="roadmap-filters" style={{
-                backgroundColor: theme.card, borderBottom: `1px solid ${theme.border}`,
+                backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb',
                 padding: '8px 24px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
             }}>
                 {['All goals', 'All product areas', 'All markets', 'All lifecycle stages', 'All statuses'].map(f => (
                     <button key={f} style={{
-                        fontSize: 12, border: `1px solid ${theme.border}`, borderRadius: 6,
-                        padding: '4px 10px', background: 'none', cursor: 'pointer', color: theme.subText,
+                        fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6,
+                        padding: '4px 10px', background: 'none', cursor: 'pointer', color: '#374151',
                         display: 'flex', alignItems: 'center', gap: 4,
                     }}>
-                        {f} <span style={{ fontSize: 10, color: theme.muted }}>▾</span>
+                        {f} <span style={{ fontSize: 10, color: '#9ca3af' }}>▾</span>
                     </button>
                 ))}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: theme.subText, cursor: 'pointer', marginLeft: 'auto' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#374151', cursor: 'pointer', marginLeft: 'auto' }}>
                     <input type="checkbox" style={{ cursor: 'pointer' }} /> Show Epics
                 </label>
-                <button style={{ fontSize: 12, border: `1px solid ${theme.border}`, borderRadius: 6, padding: '4px 10px', background: 'none', cursor: 'pointer', color: theme.subText }}>Export</button>
+                <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '4px 10px', background: 'none', cursor: 'pointer', color: '#374151' }}>Export</button>
             </div>
 
             {/* Timeline header */}
-            <div id="roadmap-timeline-header" style={{ backgroundColor: theme.timelineHeaderBg, borderBottom: `2px solid ${theme.border}`, display: 'flex', position: 'sticky', top: 0, zIndex: 5 }}>
-                <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '8px 24px', fontSize: 11, fontWeight: 700, color: theme.muted, letterSpacing: '0.06em', borderRight: `1px solid ${theme.border}` }}>INITIATIVE</div>
+            <div id="roadmap-timeline-header" style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb', display: 'flex', position: 'sticky', top: 0, zIndex: 5 }}>
+                <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '8px 24px', fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.06em', borderRight: '1px solid #e5e7eb' }}>INITIATIVE</div>
                 <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
                     {quarters.map((q, i) => (
-                        <div key={q} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: theme.muted, fontWeight: 600, padding: '8px 0', borderLeft: i > 0 ? `1px solid ${theme.border}` : 'none' }}>{q}</div>
+                        <div key={q} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#6b7280', fontWeight: 600, padding: '8px 0', borderLeft: i > 0 ? '1px solid #e5e7eb' : 'none' }}>{q}</div>
                     ))}
                     <div style={{ position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0, width: 2, backgroundColor: COLORS.walmartBlue, zIndex: 2 }} />
                     <div style={{ position: 'absolute', left: `${todayPct}%`, bottom: 0, transform: 'translateX(-50%)', backgroundColor: COLORS.walmartBlue, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: '3px 3px 0 0', letterSpacing: '0.05em', zIndex: 3 }}>TODAY</div>
@@ -1325,18 +1285,18 @@ function WalmartRoadmapCard() {
             </div>
 
             {/* Initiative Group 1 */}
-            <div id="initiative-row-1" style={{ borderBottom: `2px solid ${theme.border}` }}>
-                <div style={{ display: 'flex', borderBottom: `1px solid ${theme.border}`, backgroundColor: theme.rowGroupBg }}>
-                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: theme.text, borderRight: `1px solid ${theme.border}` }}>
+            <div id="initiative-row-1" style={{ borderBottom: '2px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: '#111827', borderRight: '1px solid #e5e7eb' }}>
                         ▼ Modernize Replenishment Planning, Order Management and Inventory systems
                     </div>
                     <div style={{ flex: 1 }} />
                 </div>
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: theme.subText }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0388: Enable inventory management modernizations with near-real-time inventory</div>
-                            <div style={{ color: theme.muted, fontSize: 11 }}>1 capability</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
                     }
                     timelineContent={
@@ -1355,9 +1315,9 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: theme.subText }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0393: PO Modernization through Order Central and SPIRE</div>
-                            <div style={{ color: theme.muted, fontSize: 11 }}>1 capability</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
                     }
                     timelineContent={
@@ -1370,9 +1330,9 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: theme.subText }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0401: Real-time shelf demand signal integration</div>
-                            <div style={{ color: theme.muted, fontSize: 11 }}>2 capabilities</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>2 capabilities</div>
                         </div>
                     }
                     timelineContent={
@@ -1387,18 +1347,18 @@ function WalmartRoadmapCard() {
             </div>
 
             {/* Initiative Group 2 */}
-            <div id="initiative-row-2" style={{ borderBottom: `2px solid ${theme.border}` }}>
-                <div style={{ display: 'flex', borderBottom: `1px solid ${theme.border}`, backgroundColor: theme.rowGroupBg }}>
-                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: theme.text, borderRight: `1px solid ${theme.border}` }}>
+            <div id="initiative-row-2" style={{ borderBottom: '2px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: '#111827', borderRight: '1px solid #e5e7eb' }}>
                         ▼ 1-Click automated setup of entire supplier catalogs
                     </div>
                     <div style={{ flex: 1 }} />
                 </div>
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: theme.subText }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0412: Supplier catalog ingestion pipeline</div>
-                            <div style={{ color: theme.muted, fontSize: 11 }}>1 capability</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
                     }
                     timelineContent={
@@ -1413,9 +1373,9 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: theme.subText }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0418: Supplier portal onboarding redesign</div>
-                            <div style={{ color: theme.muted, fontSize: 11 }}>3 capabilities</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>3 capabilities</div>
                         </div>
                     }
                     timelineContent={
@@ -1430,18 +1390,18 @@ function WalmartRoadmapCard() {
             </div>
 
             {/* Initiative Group 3 */}
-            <div id="initiative-row-3" style={{ borderBottom: `2px solid ${theme.border}` }}>
-                <div style={{ display: 'flex', borderBottom: `1px solid ${theme.border}`, backgroundColor: theme.rowGroupBg }}>
-                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: theme.text, borderRight: `1px solid ${theme.border}` }}>
+            <div id="initiative-row-3" style={{ borderBottom: '2px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                    <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: '#111827', borderRight: '1px solid #e5e7eb' }}>
                         ▼ Transform - Associate Intelligence
                     </div>
                     <div style={{ flex: 1 }} />
                 </div>
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: theme.subText }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0427: Associate task prioritization AI engine</div>
-                            <div style={{ color: theme.muted, fontSize: 11 }}>2 capabilities</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>2 capabilities</div>
                         </div>
                     }
                     timelineContent={
@@ -1455,9 +1415,9 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: theme.subText }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0433: Workload balancing across store departments</div>
-                            <div style={{ color: theme.muted, fontSize: 11 }}>1 capability</div>
+                            <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
                     }
                     timelineContent={
