@@ -103,16 +103,6 @@ const COLORS = {
     roadmapText: '#111827',
     roadmapMuted: '#6b7280',
 
-    // Action type colors
-    actionCodeChange: '#111827',
-    actionCreateTasks: '#0891b2',
-    actionGenerateSpec: '#7c3aed',
-    actionEmailSummary: '#d97706',
-    actionPending: '#9ca3af',
-    actionRunning: '#d97706',
-    actionDone: '#16a34a',
-    actionFailed: '#dc2626',
-
 };
 
 const SIZES = {
