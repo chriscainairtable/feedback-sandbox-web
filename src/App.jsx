@@ -1443,6 +1443,19 @@ export default function App() {
     const [checkedIds, setCheckedIds] = useState(new Set());
     const [pushing, setPushing] = useState(false);
     const [selectedAction, setSelectedAction] = useState('Code Change');
+    const ACTION_COLORS = {
+        'Code Change':   { bg: '#111827', hover: '#374151' },
+        'Create Tasks':  { bg: '#0891b2', hover: '#0e7490' },
+        'Generate Spec': { bg: '#7c3aed', hover: '#6d28d9' },
+        'Email Summary': { bg: '#d97706', hover: '#b45309' },
+    };
+    const ACTION_TOOLTIPS = {
+        'Code Change':   'Deploy visual changes to the canvas via Claude Code',
+        'Create Tasks':  'Generate a numbered task list from the selected feedback',
+        'Generate Spec': 'Write a product spec in markdown from the selected feedback',
+        'Email Summary': 'Compose a stakeholder email summarizing the feedback',
+    };
+    const actionColor = ACTION_COLORS[selectedAction] || ACTION_COLORS['Code Change'];
     const [reverting, setReverting] = useState(null);
     const [revertedIds, setRevertedIds] = useState(() => {
         try {
@@ -1702,12 +1715,6 @@ export default function App() {
                                         </span>
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                                            {/* Selection count row */}
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: 12, color: checkedIds.size > 0 ? COLORS.sectionSubText : '#9ca3af', whiteSpace: 'nowrap' }}>
-                                                    {checkedIds.size > 0 ? `${checkedIds.size} of ${openFeedback.length} selected` : 'Select items to push'}
-                                                </span>
-                                            </div>
                                             {/* Action type pills */}
                                             {checkedIds.size > 0 && (
                                                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -1717,6 +1724,7 @@ export default function App() {
                                                             <button
                                                                 key={action}
                                                                 onClick={() => setSelectedAction(action)}
+                                                                title={ACTION_TOOLTIPS[action]}
                                                                 style={{
                                                                     fontSize: 11, fontWeight: active ? 600 : 500,
                                                                     backgroundColor: active ? '#111827' : '#f9fafb',
@@ -1726,7 +1734,7 @@ export default function App() {
                                                                     cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
                                                                 }}
                                                             >
-                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '✓ ' : action === 'Generate Spec' ? '📄 ' : '✉ '}
+                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : '✉ '}
                                                                 {action}
                                                             </button>
                                                         );
@@ -1739,15 +1747,15 @@ export default function App() {
                                                 onClick={handlePushPlan}
                                                 disabled={checkedIds.size === 0 || pushing}
                                                 style={{
-                                                    backgroundColor: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanBg : COLORS.pushPlanDisabledBg,
+                                                    backgroundColor: (checkedIds.size > 0 && !pushing) ? actionColor.bg : COLORS.pushPlanDisabledBg,
                                                     color: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanText : COLORS.pushPlanDisabledText,
                                                     border: 'none', borderRadius: SIZES.inputRadius,
                                                     padding: '8px 14px', fontSize: 13, fontWeight: 600,
                                                     cursor: (checkedIds.size > 0 && !pushing) ? 'pointer' : 'not-allowed',
                                                     whiteSpace: 'nowrap', transition: 'background-color 0.12s', width: '100%',
                                                 }}
-                                                onMouseEnter={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanHover; }}
-                                                onMouseLeave={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanBg; }}
+                                                onMouseEnter={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = actionColor.hover; }}
+                                                onMouseLeave={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = actionColor.bg; }}
                                             >
                                                 {pushing ? 'Pushing…' : `Push — ${selectedAction}`}
                                             </button>
