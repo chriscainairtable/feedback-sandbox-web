@@ -95,11 +95,11 @@ const COLORS = {
     walmartBlue: '#0071CE',
     walmartYellow: '#FFC220',
     roadmapBg: '#f8f9fa',
-    roadmapHeaderBg: '#5B9BD5',
+    roadmapHeaderBg: '#0071CE',
     roadmapBarGreen: '#16a34a',
     roadmapBarGrey: '#9ca3af',
     roadmapBarDefine: '#d97706',
-    roadmapBarDiscover: '#047857',
+    roadmapBarDiscover: '#0891b2',
     roadmapText: '#111827',
     roadmapMuted: '#6b7280',
 
@@ -147,7 +147,6 @@ const SIZES = {
     roadmapRowHeight: 52,
     roadmapBarHeight: 28,
     roadmapBarRadius: 4,
-    roadmapSubRowFontSize: 14,
 
 };
 
@@ -1420,42 +1419,30 @@ function StatusBadge({ label, color }) {
 
 function WalmartRoadmapCard() {
     const [detailBar, setDetailBar] = useState(null);
-    const [ownerFilter, setOwnerFilter] = useState('All');
-    const INITIATIVE_OWNERS = {
-        'initiative-row-1': 'Replenishment Team',
-        'initiative-row-2': 'Supplier Team',
-        'initiative-row-3': 'Associate Intelligence Team',
-    };
     const quarters = ['FY27 Q1', 'FY27 Q2', 'FY27 Q3', 'FY27 Q4', 'FY28 Q1', 'FY28 Q2'];
     const qw = 100 / 6;
     const todayPct = qw * 1.35; // ~mid Q2
 
-    function TimelineRow({ id, left, width, color, dashed, badge, badgeColor, label, subLabel, owner, onEnter }) {
-        const [hovered, setHovered] = useState(false);
+    function TimelineRow({ id, left, width, color, dashed, badge, badgeColor, label, subLabel, onEnter }) {
         return (
             <div
                 id={id}
-                onMouseEnter={e => { setHovered(true); if (onEnter) onEnter(e); }}
-                onMouseLeave={() => { setHovered(false); setDetailBar(null); }}
+                onMouseEnter={onEnter}
+                onMouseLeave={() => setDetailBar(null)}
                 style={{
                     position: 'absolute',
                     left: `${left}%`, width: `${width}%`,
-                    top: '50%', transform: hovered ? 'translateY(-50%) scale(1.02)' : 'translateY(-50%)',
+                    top: '50%', transform: 'translateY(-50%)',
                     height: SIZES.roadmapBarHeight,
                     backgroundColor: dashed ? 'transparent' : color,
                     border: dashed ? `2px dashed ${COLORS.roadmapBarGrey}` : 'none',
                     borderRadius: SIZES.roadmapBarRadius,
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '0 8px', cursor: 'default', overflow: 'hidden', boxSizing: 'border-box',
-                    boxShadow: hovered && !dashed ? '0 4px 12px rgba(0,0,0,0.18)' : 'none',
-                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                    filter: hovered && !dashed ? 'brightness(1.08)' : 'none',
-                    zIndex: hovered ? 2 : 'auto',
                 }}
             >
                 {badge && <StatusBadge label={badge} color={badgeColor || 'grey'} />}
                 <span style={{ fontSize: 12, fontWeight: 500, color: dashed ? '#6b7280' : '#ffffff', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-                {owner && <span style={{ fontSize: 10, color: dashed ? '#9ca3af' : 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', flexShrink: 0, fontStyle: 'italic' }}>{owner}</span>}
                 {subLabel && <span style={{ fontSize: 11, color: dashed ? '#9ca3af' : 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', flexShrink: 0 }}>{subLabel}</span>}
             </div>
         );
@@ -1535,7 +1522,7 @@ function WalmartRoadmapCard() {
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                     <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: '#374151' }}>Products</button>
-                    <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: '#374151' }}>Collapse</button>
+                    <button style={{ fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6, padding: '5px 12px', background: 'none', cursor: 'pointer', color: '#374151' }}>Collapse All</button>
                 </div>
             </div>
 
@@ -1553,20 +1540,6 @@ function WalmartRoadmapCard() {
                         {f} <span style={{ fontSize: 10, color: '#9ca3af' }}>▾</span>
                     </button>
                 ))}
-                <select
-                    value={ownerFilter}
-                    onChange={e => setOwnerFilter(e.target.value)}
-                    style={{
-                        fontSize: 12, border: '1px solid #d1d5db', borderRadius: 6,
-                        padding: '4px 10px', background: 'none', cursor: 'pointer', color: '#374151',
-                        appearance: 'none', paddingRight: 22, backgroundImage: 'none',
-                    }}
-                >
-                    <option value="All">All team owners</option>
-                    {Object.values(INITIATIVE_OWNERS).map(o => (
-                        <option key={o} value={o}>{o}</option>
-                    ))}
-                </select>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#374151', cursor: 'pointer', marginLeft: 'auto' }}>
                     <input type="checkbox" style={{ cursor: 'pointer' }} /> Show Epics
                 </label>
@@ -1577,22 +1550,16 @@ function WalmartRoadmapCard() {
             <div id="roadmap-timeline-header" style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb', display: 'flex', position: 'sticky', top: 0, zIndex: 5 }}>
                 <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '8px 24px', fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.06em', borderRight: '1px solid #e5e7eb' }}>INITIATIVE</div>
                 <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
-                    {quarters.map((q, i) => {
-                        const [fy, qt] = q.split(' ');
-                        return (
-                            <div key={q} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#6b7280', padding: '8px 0', borderLeft: i > 0 ? '1px solid #e5e7eb' : 'none' }}>
-                                <span style={{ fontWeight: 700 }}>{fy}</span>{' '}<span style={{ fontWeight: 400 }}>{qt}</span>
-                            </div>
-                        );
-                    })}
+                    {quarters.map((q, i) => (
+                        <div key={q} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#6b7280', fontWeight: 600, padding: '8px 0', borderLeft: i > 0 ? '1px solid #e5e7eb' : 'none' }}>{q}</div>
+                    ))}
                     <div style={{ position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0, width: 2, backgroundColor: COLORS.walmartBlue, zIndex: 2 }} />
-                    <div style={{ position: 'absolute', left: `${todayPct}%`, top: 0, transform: 'translateX(-50%)', backgroundColor: COLORS.walmartBlue, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: '0 0 3px 3px', letterSpacing: '0.05em', zIndex: 3 }}>TODAY</div>
                     <div style={{ position: 'absolute', left: `${todayPct}%`, bottom: 0, transform: 'translateX(-50%)', backgroundColor: COLORS.walmartBlue, color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: '3px 3px 0 0', letterSpacing: '0.05em', zIndex: 3 }}>TODAY</div>
                 </div>
             </div>
 
             {/* Initiative Group 1 */}
-            {(ownerFilter === 'All' || ownerFilter === INITIATIVE_OWNERS['initiative-row-1']) && <div id="initiative-row-1" style={{ borderBottom: '2px solid #e5e7eb' }}>
+            <div id="initiative-row-1" style={{ borderBottom: '2px solid #e5e7eb' }}>
                 <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
                     <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: '#111827', borderRight: '1px solid #e5e7eb' }}>
                         ▼ Modernize Replenishment Planning, Order Management and Inventory systems
@@ -1601,7 +1568,7 @@ function WalmartRoadmapCard() {
                 </div>
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: SIZES.roadmapSubRowFontSize, color: '#374151' }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0388: Enable inventory management modernizations with near-real-time inventory</div>
                             <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
@@ -1622,7 +1589,7 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: SIZES.roadmapSubRowFontSize, color: '#374151' }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0393: PO Modernization through Order Central and SPIRE</div>
                             <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
@@ -1637,7 +1604,7 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: SIZES.roadmapSubRowFontSize, color: '#374151' }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0401: Real-time shelf demand signal integration</div>
                             <div style={{ color: '#9ca3af', fontSize: 11 }}>2 capabilities</div>
                         </div>
@@ -1651,10 +1618,10 @@ function WalmartRoadmapCard() {
                         />
                     }
                 />
-            </div>}
+            </div>
 
             {/* Initiative Group 2 */}
-            {(ownerFilter === 'All' || ownerFilter === INITIATIVE_OWNERS['initiative-row-2']) && <div id="initiative-row-2" style={{ borderBottom: '2px solid #e5e7eb' }}>
+            <div id="initiative-row-2" style={{ borderBottom: '2px solid #e5e7eb' }}>
                 <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
                     <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: '#111827', borderRight: '1px solid #e5e7eb' }}>
                         ▼ 1-Click automated setup of entire supplier catalogs
@@ -1663,7 +1630,7 @@ function WalmartRoadmapCard() {
                 </div>
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: SIZES.roadmapSubRowFontSize, color: '#374151' }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0412: Supplier catalog ingestion pipeline</div>
                             <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
@@ -1680,7 +1647,7 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: SIZES.roadmapSubRowFontSize, color: '#374151' }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0418: Supplier portal onboarding redesign</div>
                             <div style={{ color: '#9ca3af', fontSize: 11 }}>3 capabilities</div>
                         </div>
@@ -1691,14 +1658,13 @@ function WalmartRoadmapCard() {
                             color={COLORS.roadmapBarDefine}
                             badge="Define" badgeColor="yellow"
                             label="Supplier Portal v2" subLabel="XL - 6 Quarters"
-                            owner="Sarah Chen"
                         />
                     }
                 />
-            </div>}
+            </div>
 
             {/* Initiative Group 3 */}
-            {(ownerFilter === 'All' || ownerFilter === INITIATIVE_OWNERS['initiative-row-3']) && <div id="initiative-row-3" style={{ borderBottom: '2px solid #e5e7eb' }}>
+            <div id="initiative-row-3" style={{ borderBottom: '2px solid #e5e7eb' }}>
                 <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
                     <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '10px 24px', fontSize: 13, fontWeight: 600, color: '#111827', borderRight: '1px solid #e5e7eb' }}>
                         ▼ Transform - Associate Intelligence
@@ -1707,7 +1673,7 @@ function WalmartRoadmapCard() {
                 </div>
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: SIZES.roadmapSubRowFontSize, color: '#374151' }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0427: Associate task prioritization AI engine</div>
                             <div style={{ color: '#9ca3af', fontSize: 11 }}>2 capabilities</div>
                         </div>
@@ -1723,7 +1689,7 @@ function WalmartRoadmapCard() {
                 />
                 <InitiativeRow
                     leftContent={
-                        <div style={{ padding: '6px 16px 6px 36px', fontSize: SIZES.roadmapSubRowFontSize, color: '#374151' }}>
+                        <div style={{ padding: '6px 16px 6px 36px', fontSize: 12, color: '#374151' }}>
                             <div style={{ marginBottom: 2, fontWeight: 500 }}>ENB-0433: Workload balancing across store departments</div>
                             <div style={{ color: '#9ca3af', fontSize: 11 }}>1 capability</div>
                         </div>
@@ -1737,7 +1703,7 @@ function WalmartRoadmapCard() {
                         />
                     }
                 />
-            </div>}
+            </div>
 
         </div>
     );
