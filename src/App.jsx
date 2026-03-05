@@ -192,6 +192,10 @@ function FeedbackForm({ onCreated }) {
     const [snipContext, setSnipContext] = useState(null);
     const [snipPreview, setSnipPreview] = useState(null);
     const [hoverInfo, setHoverInfo] = useState(null);
+    const [inputMode, setInputMode] = useState('single'); // 'single' | 'list'
+    const [parseSourceLabel, setParseSourceLabel] = useState('');
+    const [parseStatus, setParseStatus] = useState('idle'); // 'idle' | 'creating' | 'polling' | 'done' | 'failed'
+    const [parsedCount, setParsedCount] = useState(0);
     const overlayRef = useRef(null);
     const snipTargetRef = useRef(null);
     const hoveredElement = useRef(null);
@@ -298,6 +302,7 @@ function FeedbackForm({ onCreated }) {
             'Status': 'New',
             'Extension Target': EXTENSION_TARGET,
             'Canvas Component': CANVAS_COMPONENT,
+            'Item Type': 'code',
             'Source': 'web',
             'Interface URL': window.location.href,
             'User Agent': navigator.userAgent,
@@ -312,6 +317,55 @@ function FeedbackForm({ onCreated }) {
         setSnipMode(false); setSnipContext(null); setSnipPreview(null); setHoverInfo(null);
         setTimeout(() => setJustSubmitted(false), 2000);
         if (onCreated) onCreated();
+    }
+
+    async function handleParse() {
+        if (!text.trim()) return;
+        setParseStatus('creating');
+
+        let jobId;
+        try {
+            jobId = await createRecord('Email Parse Jobs', {
+                'Email Text': text.trim(),
+                'Source Label': parseSourceLabel.trim(),
+                'Canvas Component': CANVAS_COMPONENT,
+                'Session ID': SESSION_ID,
+                'Status': 'Parsing',
+            });
+        // eslint-disable-next-line no-unused-vars
+        } catch (_) {
+            setParseStatus('failed');
+            return;
+        }
+
+        setParseStatus('polling');
+
+        const poll = setInterval(async () => {
+            try {
+                const result = await listRecords('Email Parse Jobs', {
+                    filterByFormula: `RECORD_ID()="${jobId}"`,
+                    fields: ['Status', 'Item Count'],
+                });
+                const rec = result[0];
+                if (!rec) return;
+                const status = rec.fields['Status'] || '';
+                if (status === 'Done') {
+                    clearInterval(poll);
+                    setParsedCount(rec.fields['Item Count'] || 0);
+                    setParseStatus('done');
+                    setText('');
+                    setParseSourceLabel('');
+                    if (onCreated) onCreated();
+                } else if (status === 'Failed') {
+                    clearInterval(poll);
+                    setParseStatus('failed');
+                }
+            // eslint-disable-next-line no-unused-vars
+            } catch (_) {
+                clearInterval(poll);
+                setParseStatus('failed');
+            }
+        }, 3000);
     }
 
     return (
@@ -354,128 +408,258 @@ function FeedbackForm({ onCreated }) {
                 document.body
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Textarea + snip button */}
-                <textarea
-                    id="feedback-text-input"
-                    value={text}
-                    onChange={e => setText(e.target.value)}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    placeholder="What should change?"
-                    rows={3}
-                    style={{
-                        width: '100%', fontSize: SIZES.inputFontSize, color: COLORS.inputText,
-                        backgroundColor: COLORS.inputBg,
-                        border: `1.5px solid ${focused ? COLORS.inputBorderFocus : COLORS.inputBorder}`,
-                        borderRadius: SIZES.inputRadius,
-                        padding: `${SIZES.inputPaddingY}px ${SIZES.inputPaddingX}px`,
-                        outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-                        resize: 'none', lineHeight: 1.5, transition: 'border-color 0.15s',
-                    }}
-                />
-
-                {/* Snip preview */}
-                {snipContext && (
-                    <div style={{
-                        display: 'flex', flexDirection: 'column', gap: 6,
-                        backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
-                        borderRadius: 8, padding: '8px 10px', marginTop: snipMode ? 8 : 0,
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: '#374151', fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
-                                {snipContext.tag}{snipContext.className ? `.${snipContext.className.trim().split(' ')[0]}` : ''}
-                                <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>
-                                    {snipContext.boundingRect.w}×{snipContext.boundingRect.h}px
-                                </span>
-                            </span>
-                            <button onClick={clearSnip} style={{ background: 'none', border: 'none', padding: '0 2px', fontSize: 12, color: '#9ca3af', cursor: 'pointer', lineHeight: 1 }}>✕</button>
-                        </div>
-                        {snipPreview && (
-                            <img src={snipPreview} alt="Snip" style={{ maxWidth: '100%', height: 'auto', display: 'block', borderRadius: 4, border: '1px solid #e5e7eb', margin: '0 auto' }} />
-                        )}
-                        <textarea
-                            value={snipContext.html || ''}
-                            readOnly
-                            rows={2}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {/* Tab toggle */}
+                <div style={{ display: 'flex', gap: 0, marginBottom: 10, borderBottom: '1px solid #e5e7eb' }}>
+                    {['single', 'list'].map(mode => (
+                        <button
+                            key={mode}
+                            onClick={() => {
+                                setInputMode(mode);
+                                setParseStatus('idle');
+                                setText('');
+                                setParseSourceLabel('');
+                            }}
                             style={{
-                                width: '100%', fontSize: 10, color: '#6b7280', backgroundColor: '#ffffff',
-                                border: '1px solid #e5e7eb', borderRadius: 4, padding: '4px 6px',
-                                boxSizing: 'border-box', fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-                                resize: 'none', lineHeight: 1.4, outline: 'none',
+                                fontSize: 11, fontWeight: inputMode === mode ? 600 : 400,
+                                color: inputMode === mode ? '#111827' : '#9ca3af',
+                                background: 'none', border: 'none',
+                                borderBottom: inputMode === mode ? '2px solid #111827' : '2px solid transparent',
+                                padding: '4px 10px', cursor: 'pointer',
+                                marginBottom: -1,
+                                textTransform: 'capitalize',
+                            }}
+                        >
+                            {mode === 'single' ? 'Single' : 'Parse List'}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Single mode — original form, unchanged */}
+                {inputMode === 'single' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <textarea
+                            id="feedback-text-input"
+                            value={text}
+                            onChange={e => setText(e.target.value)}
+                            onFocus={() => setFocused(true)}
+                            onBlur={() => setFocused(false)}
+                            placeholder="What should change?"
+                            rows={3}
+                            style={{
+                                width: '100%', fontSize: SIZES.inputFontSize, color: COLORS.inputText,
+                                backgroundColor: COLORS.inputBg,
+                                border: `1.5px solid ${focused ? COLORS.inputBorderFocus : COLORS.inputBorder}`,
+                                borderRadius: SIZES.inputRadius,
+                                padding: `${SIZES.inputPaddingY}px ${SIZES.inputPaddingX}px`,
+                                outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+                                resize: 'none', lineHeight: 1.5, transition: 'border-color 0.15s',
                             }}
                         />
+
+                        {snipContext && (
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', gap: 6,
+                                backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+                                borderRadius: 8, padding: '8px 10px', marginTop: snipMode ? 8 : 0,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: '#374151', fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
+                                        {snipContext.tag}{snipContext.className ? `.${snipContext.className.trim().split(' ')[0]}` : ''}
+                                        <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>
+                                            {snipContext.boundingRect.w}×{snipContext.boundingRect.h}px
+                                        </span>
+                                    </span>
+                                    <button onClick={clearSnip} style={{ background: 'none', border: 'none', padding: '0 2px', fontSize: 12, color: '#9ca3af', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                                </div>
+                                {snipPreview && (
+                                    <img src={snipPreview} alt="Snip" style={{ maxWidth: '100%', height: 'auto', display: 'block', borderRadius: 4, border: '1px solid #e5e7eb', margin: '0 auto' }} />
+                                )}
+                                <textarea
+                                    value={snipContext.html || ''}
+                                    readOnly
+                                    rows={2}
+                                    style={{
+                                        width: '100%', fontSize: 10, color: '#6b7280', backgroundColor: '#ffffff',
+                                        border: '1px solid #e5e7eb', borderRadius: 4, padding: '4px 6px',
+                                        boxSizing: 'border-box', fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+                                        resize: 'none', lineHeight: 1.4, outline: 'none',
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                <span style={{
+                                    fontSize: 10, fontWeight: 700, color: COLORS.sectionSubText,
+                                    letterSpacing: '0.05em', textTransform: 'uppercase',
+                                }}>
+                                    Priority
+                                </span>
+                                <div style={{ display: 'flex', gap: 5 }}>
+                                    {['Low', 'Medium', 'High'].map(p => {
+                                        const selected = priority === p;
+                                        const sc = PRIORITY_PILL_COLORS[p];
+                                        return (
+                                            <button
+                                                key={p}
+                                                id={`priority-pill-${p.toLowerCase()}`}
+                                                onClick={() => setPriority(selected ? null : p)}
+                                                style={{
+                                                    fontSize: 11, fontWeight: selected ? 600 : 500,
+                                                    color: selected ? sc.text : COLORS.pillUnselectedText,
+                                                    backgroundColor: selected ? sc.bg : COLORS.pillUnselectedBg,
+                                                    border: `1.5px solid ${selected ? sc.border : COLORS.pillUnselectedBorder}`,
+                                                    borderRadius: SIZES.pillRadius,
+                                                    padding: '4px 10px', cursor: 'pointer', transition: 'all 0.1s',
+                                                }}
+                                            >
+                                                {p}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <button
+                                    onClick={handleSnipToggle}
+                                    title={snipMode ? 'Cancel snip' : 'Pick UI element'}
+                                    style={{
+                                        background: snipMode ? '#eff6ff' : 'transparent',
+                                        border: `1px solid ${snipMode ? '#4B8BF5' : '#d1d5db'}`,
+                                        borderRadius: 999, padding: '5px 12px', fontSize: 12,
+                                        color: snipMode ? '#2563eb' : '#374151',
+                                        cursor: 'pointer', whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    ✂ Snip
+                                </button>
+                                <button
+                                    id="feedback-submit"
+                                    onClick={handleSubmit}
+                                    disabled={!canSubmit}
+                                    style={{
+                                        backgroundColor: justSubmitted ? '#dcfce7' : canSubmit ? COLORS.submitBg : COLORS.submitDisabledBg,
+                                        color: justSubmitted ? '#166534' : canSubmit ? COLORS.submitText : COLORS.submitDisabledText,
+                                        border: 'none', borderRadius: SIZES.inputRadius,
+                                        padding: '7px 16px', fontSize: 13, fontWeight: 600,
+                                        cursor: canSubmit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap',
+                                        transition: 'background-color 0.12s',
+                                    }}
+                                    onMouseEnter={e => { if (canSubmit && !justSubmitted) e.currentTarget.style.backgroundColor = COLORS.submitHover; }}
+                                    onMouseLeave={e => { if (canSubmit && !justSubmitted) e.currentTarget.style.backgroundColor = COLORS.submitBg; }}
+                                >
+                                    {submitting ? '…' : justSubmitted ? '✓' : 'Add'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Row 1: Priority label + pills */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <span style={{
-                            fontSize: 10, fontWeight: 700, color: COLORS.sectionSubText,
-                            letterSpacing: '0.05em', textTransform: 'uppercase',
-                        }}>
-                            Priority
-                        </span>
-                        <div style={{ display: 'flex', gap: 5 }}>
-                            {['Low', 'Medium', 'High'].map(p => {
-                                const selected = priority === p;
-                                const sc = PRIORITY_PILL_COLORS[p];
-                                return (
-                                    <button
-                                        key={p}
-                                        id={`priority-pill-${p.toLowerCase()}`}
-                                        onClick={() => setPriority(selected ? null : p)}
-                                        style={{
-                                            fontSize: 11, fontWeight: selected ? 600 : 500,
-                                            color: selected ? sc.text : COLORS.pillUnselectedText,
-                                            backgroundColor: selected ? sc.bg : COLORS.pillUnselectedBg,
-                                            border: `1.5px solid ${selected ? sc.border : COLORS.pillUnselectedBorder}`,
-                                            borderRadius: SIZES.pillRadius,
-                                            padding: '4px 10px', cursor: 'pointer', transition: 'all 0.1s',
-                                        }}
-                                    >
-                                        {p}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                {/* List mode */}
+                {inputMode === 'list' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {parseStatus === 'idle' && (
+                            <>
+                                <textarea
+                                    value={text}
+                                    onChange={e => setText(e.target.value)}
+                                    placeholder="Paste feedback — one item per line, bullets, or full email. AI will extract and classify each item."
+                                    rows={6}
+                                    style={{
+                                        width: '100%', fontSize: SIZES.inputFontSize,
+                                        color: COLORS.inputText, backgroundColor: COLORS.inputBg,
+                                        border: `1.5px solid ${COLORS.inputBorder}`,
+                                        borderRadius: SIZES.inputRadius,
+                                        padding: `${SIZES.inputPaddingY}px ${SIZES.inputPaddingX}px`,
+                                        outline: 'none', boxSizing: 'border-box',
+                                        fontFamily: 'inherit', resize: 'none', lineHeight: 1.5,
+                                    }}
+                                    onFocus={e => { e.target.style.borderColor = COLORS.inputBorderFocus; }}
+                                    onBlur={e => { e.target.style.borderColor = COLORS.inputBorder; }}
+                                />
+                                <input
+                                    value={parseSourceLabel}
+                                    onChange={e => setParseSourceLabel(e.target.value)}
+                                    placeholder="Source (optional) — e.g. Kim Rust, Mar 5"
+                                    style={{
+                                        width: '100%', fontSize: 12, color: COLORS.inputText,
+                                        backgroundColor: COLORS.inputBg,
+                                        border: `1.5px solid ${COLORS.inputBorder}`,
+                                        borderRadius: SIZES.inputRadius,
+                                        padding: '6px 10px', outline: 'none',
+                                        boxSizing: 'border-box', fontFamily: 'inherit',
+                                    }}
+                                    onFocus={e => { e.target.style.borderColor = COLORS.inputBorderFocus; }}
+                                    onBlur={e => { e.target.style.borderColor = COLORS.inputBorder; }}
+                                />
+                                <button
+                                    onClick={handleParse}
+                                    disabled={!text.trim()}
+                                    style={{
+                                        backgroundColor: text.trim() ? COLORS.submitBg : COLORS.submitDisabledBg,
+                                        color: text.trim() ? COLORS.submitText : COLORS.submitDisabledText,
+                                        border: 'none', borderRadius: SIZES.inputRadius,
+                                        padding: '8px 16px', fontSize: 13, fontWeight: 600,
+                                        cursor: text.trim() ? 'pointer' : 'not-allowed',
+                                        alignSelf: 'flex-end',
+                                    }}
+                                >
+                                    Parse List →
+                                </button>
+                            </>
+                        )}
 
-                    {/* Row 2: ✂ Snip left, Add right */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <button
-                            onClick={handleSnipToggle}
-                            title={snipMode ? 'Cancel snip' : 'Pick UI element'}
-                            style={{
-                                background: snipMode ? '#eff6ff' : 'transparent',
-                                border: `1px solid ${snipMode ? '#4B8BF5' : '#d1d5db'}`,
-                                borderRadius: 999, padding: '5px 12px', fontSize: 12,
-                                color: snipMode ? '#2563eb' : '#374151',
-                                cursor: 'pointer', whiteSpace: 'nowrap',
-                            }}
-                        >
-                            ✂ Snip
-                        </button>
-                        <button
-                            id="feedback-submit"
-                            onClick={handleSubmit}
-                            disabled={!canSubmit}
-                            style={{
-                                backgroundColor: justSubmitted ? '#dcfce7' : canSubmit ? COLORS.submitBg : COLORS.submitDisabledBg,
-                                color: justSubmitted ? '#166534' : canSubmit ? COLORS.submitText : COLORS.submitDisabledText,
-                                border: 'none', borderRadius: SIZES.inputRadius,
-                                padding: '7px 16px', fontSize: 13, fontWeight: 600,
-                                cursor: canSubmit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap',
-                                transition: 'background-color 0.12s',
-                            }}
-                            onMouseEnter={e => { if (canSubmit && !justSubmitted) e.currentTarget.style.backgroundColor = COLORS.submitHover; }}
-                            onMouseLeave={e => { if (canSubmit && !justSubmitted) e.currentTarget.style.backgroundColor = COLORS.submitBg; }}
-                        >
-                            {submitting ? '…' : justSubmitted ? '✓' : 'Add'}
-                        </button>
+                        {(parseStatus === 'creating' || parseStatus === 'polling') && (
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                justifyContent: 'center', gap: 6, padding: '24px 0',
+                                color: COLORS.sectionSubText, fontSize: 12,
+                            }}>
+                                <span>⏱ Parsing list<AnimatedDots /></span>
+                                <span style={{ fontSize: 11, color: '#9ca3af' }}>checking every 3s</span>
+                            </div>
+                        )}
+
+                        {parseStatus === 'done' && (
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                gap: 8, padding: '16px 0',
+                            }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>
+                                    ✓ {parsedCount} items added to Queue
+                                </span>
+                                <button
+                                    onClick={() => { setParseStatus('idle'); setText(''); }}
+                                    style={{
+                                        background: 'none', border: 'none', fontSize: 12,
+                                        color: COLORS.sectionSubText, cursor: 'pointer',
+                                        textDecoration: 'underline',
+                                    }}
+                                >
+                                    Parse another list
+                                </button>
+                            </div>
+                        )}
+
+                        {parseStatus === 'failed' && (
+                            <div style={{
+                                fontSize: 12, color: '#dc2626', padding: '8px 0', textAlign: 'center',
+                            }}>
+                                ✗ Parse failed — check Airtable automation logs
+                                <br />
+                                <button
+                                    onClick={() => setParseStatus('idle')}
+                                    style={{ background: 'none', border: 'none', fontSize: 12, color: COLORS.sectionSubText, cursor: 'pointer', textDecoration: 'underline', marginTop: 4 }}
+                                >
+                                    Try again
+                                </button>
+                            </div>
+                        )}
                     </div>
-                </div>
+                )}
             </div>
         </>
     );
@@ -714,11 +898,19 @@ function OpenFeedbackList({ openFeedback, checkedIds, onToggle, onRefresh }) {
             {/* Empty state */}
             {!openFeedback.length ? (
                 <div style={{ fontSize: 13, color: COLORS.sectionSubText, padding: '8px 0' }}>No open feedback.</div>
-            ) : (
+            ) : (() => {
+                const codeItems = openFeedback.filter(r =>
+                    !r.fields['Item Type'] ||
+                    r.fields['Item Type'] === 'code'
+                );
+                const noteItems = openFeedback.filter(r =>
+                    r.fields['Item Type'] === 'note'
+                );
+                return (
                 <>
                     {tooltipData && <SnipTooltip ctx={tooltipData.ctx} pos={tooltipData.pos} />}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {openFeedback.map(record => {
+                        {codeItems.map(record => {
                             const checked = checkedIds.has(record.id);
                             const isHovered = hoveredId === record.id;
                             const feedbackText = record.fields['Feedback Text'] || '';
@@ -807,7 +999,7 @@ function OpenFeedbackList({ openFeedback, checkedIds, onToggle, onRefresh }) {
                                                     color: CATEGORY_COLORS[category].text,
                                                     padding: '2px 6px',
                                                 }}>
-                                                    {category}{!claudeCodeReady && <span title="Not recommended for Code Change"> ⚠</span>}
+                                                    {category}{!claudeCodeReady && <span title="Not recommended for Push Code" style={{ fontSize: 10, marginLeft: 2 }}>⚠</span>}
                                                 </span>
                                             )}
                                         </div>
@@ -816,8 +1008,53 @@ function OpenFeedbackList({ openFeedback, checkedIds, onToggle, onRefresh }) {
                             );
                         })}
                     </div>
+
+                    {noteItems.length > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                            <div style={{
+                                fontSize: 10, fontWeight: 700, color: '#9ca3af',
+                                letterSpacing: '0.06em', textTransform: 'uppercase',
+                                marginBottom: 6,
+                            }}>
+                                Context
+                            </div>
+                            {noteItems.map(record => {
+                                const feedbackText = record.fields['Feedback Text'] || '';
+                                const sourceLabel = record.fields['Source Label'] || '';
+                                return (
+                                    <div
+                                        key={record.id}
+                                        style={{
+                                            display: 'flex', alignItems: 'flex-start', gap: 6,
+                                            padding: '6px 8px', marginBottom: 4,
+                                            backgroundColor: '#f9fafb',
+                                            border: '1px solid #f3f4f6',
+                                            borderRadius: 6, fontSize: 11,
+                                            color: '#6b7280', lineHeight: 1.4,
+                                        }}
+                                    >
+                                        <span style={{ flexShrink: 0, marginTop: 1 }}>💬</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                overflow: 'hidden', display: '-webkit-box',
+                                                WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                                            }}>
+                                                {feedbackText}
+                                            </div>
+                                            {sourceLabel && (
+                                                <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>
+                                                    {sourceLabel}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </>
-            )}
+                );
+            })()}
         </>
     );
 }
@@ -837,7 +1074,7 @@ function relativeTime(isoString) {
 
 // ─── Versions List ─────────────────────────────────────────────────────────────
 
-function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) {
+function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert, onPushCode }) {
     const [planTooltip, setPlanTooltip] = useState(null);
 
     // Include 'New' plans only if they have linked items (stuck/queued bundles)
@@ -888,11 +1125,12 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                 const actionType = plan.fields['Action Type'] || 'Code Change';
                 const actionStatus = plan.fields['Action Status'] || '';
                 const actionOutput = plan.fields['Action Output'] || '';
-                const isNonCodeChange = actionType !== 'Code Change';
+                const isNonCodeChange = actionType !== 'Code Change' && actionType !== 'Push Code';
+                const isSavePlan = isQueued && actionType === 'Save Plan';
                 const isRunning = isNonCodeChange && actionStatus === 'Running';
                 const isActionDone = isNonCodeChange && actionStatus === 'Done';
                 const isActionFailed = isNonCodeChange && actionStatus === 'Failed';
-                const actionIcon = { 'Code Change': '⚡', 'Create Tasks': '✓', 'Generate Spec': '📄', 'Email Summary': '✉' }[actionType] || '⚡';
+                const actionIcon = { 'Push Code': '⚡', 'Code Change': '⚡', 'Save Plan': '📋', 'Create Tasks': '✓', 'Generate Spec': '📄', 'Email Summary': '✉' }[actionType] || '⚡';
                 const isExecuting = status === 'Executing';
                 const isReverting = status === 'Reverting';
                 const isDone = status === 'Done' || status === 'Approved';
@@ -965,6 +1203,19 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                                     </div>
                                 )}
                             </div>
+                            {isSavePlan && (
+                                <button
+                                    onClick={() => onPushCode(plan)}
+                                    style={{
+                                        background: 'none', border: 'none', padding: 0, margin: 0,
+                                        fontSize: 11, color: '#9ca3af', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = '#111827'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}
+                                >
+                                    Push Code →
+                                </button>
+                            )}
                             {reverting === plan.id || isReverting
                                 ? <span style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                                     Reverting<AnimatedDots />
@@ -1465,29 +1716,16 @@ export default function App() {
     const [allPlans, setAllPlans] = useState([]);
     const [checkedIds, setCheckedIds] = useState(new Set());
     const [pushing, setPushing] = useState(false);
-    const [selectedAction, setSelectedAction] = useState('Code Change');
+    const [selectedAction, setSelectedAction] = useState('Push Code');
     const ACTION_COLORS = {
-        'Code Change':   { bg: '#111827', hover: '#374151' },
-        'Create Tasks':  { bg: '#0891b2', hover: '#0e7490' },
-        'Generate Spec': { bg: '#7c3aed', hover: '#6d28d9' },
-        'Email Summary': { bg: '#d97706', hover: '#b45309' },
-        'Parse List':    { bg: '#0f766e', hover: '#0d9488' },
+        'Push Code':  { bg: '#111827', hover: '#374151' },
+        'Save Plan':  { bg: '#6b7280', hover: '#4b5563' },
     };
     const ACTION_TOOLTIPS = {
-        'Code Change':   'Deploy visual changes to the canvas via Claude Code',
-        'Create Tasks':  'Generate a numbered task list from the selected feedback',
-        'Generate Spec': 'Write a product spec in markdown from the selected feedback',
-        'Email Summary': 'Compose a stakeholder email summarizing the feedback',
-        'Parse List':    'Parse a list of feedback items into individual records',
+        'Push Code':  'Deploy visual changes to the canvas via Claude Code',
+        'Save Plan':  'Save items as a plan for reference or handoff — no CI trigger',
     };
-    const actionColor = ACTION_COLORS[selectedAction] || ACTION_COLORS['Code Change'];
-    const [parseModalOpen, setParseModalOpen] = useState(false);
-    const [parseEmailText, setParseEmailText] = useState('');
-    const [parseSourceLabel, setParseSourceLabel] = useState('');
-    const [parseJobId, setParseJobId] = useState(null); // eslint-disable-line no-unused-vars
-    const [parseStatus, setParseStatus] = useState('idle'); // 'idle' | 'creating' | 'polling' | 'done' | 'failed'
-    const [parseItemCount, setParseItemCount] = useState(0);
-    const parseIntervalRef = useRef(null);
+    const actionColor = ACTION_COLORS[selectedAction] || ACTION_COLORS['Push Code'];
     const [reverting, setReverting] = useState(null);
     const [revertedIds, setRevertedIds] = useState(() => {
         try {
@@ -1531,6 +1769,7 @@ export default function App() {
                 const { v } = await res.json();
                 if (currentVersion === null) { currentVersion = v; return; }
                 if (v !== currentVersion) setTimeout(() => window.location.reload(), 2000);
+            // eslint-disable-next-line no-unused-vars, no-empty
             } catch (_) {}
         }
         const id = setInterval(checkVersion, 5000);
@@ -1561,7 +1800,12 @@ export default function App() {
         ? allFeedback.filter(r => matchesRecordId(r.fields['Version'], executingPlan.id))
         : [];
 
-    const allChecked = openFeedback.length > 0 && checkedIds.size === openFeedback.length;
+    const codeItems = openFeedback.filter(r =>
+        !r.fields['Item Type'] ||
+        r.fields['Item Type'] === 'code'
+    );
+
+    const allChecked = codeItems.length > 0 && checkedIds.size === codeItems.length;
 
     function toggleChecked(id) {
         setCheckedIds(prev => {
@@ -1573,10 +1817,10 @@ export default function App() {
     }
 
     function toggleAll() {
-        if (openFeedback.length > 0 && checkedIds.size === openFeedback.length) {
+        if (codeItems.length > 0 && checkedIds.size === codeItems.length) {
             setCheckedIds(new Set());
         } else {
-            setCheckedIds(new Set(openFeedback.map(r => r.id)));
+            setCheckedIds(new Set(codeItems.map(r => r.id)));
         }
     }
 
@@ -1600,58 +1844,19 @@ export default function App() {
             return updateRecord(FEEDBACK_TABLE, record.id, { 'Version': [planId] });
         });
         await Promise.all(updates);
-        if (selectedAction === 'Code Change') {
+        if (selectedAction === 'Push Code') {
             await updateRecord(PLANS_TABLE, planId, { 'Execute': true });
-        } else {
-            await updateRecord(PLANS_TABLE, planId, { 'Action Status': 'Running' });
         }
         setCheckedIds(new Set());
-        setSelectedAction('Code Change');
+        setSelectedAction('Push Code');
         setPushing(false);
         handleRefresh();
         setActiveTab('log');
     }
 
-    async function handleParse() {
-        if (!parseEmailText.trim()) return;
-        setParseStatus('creating');
-        const jobId = await createRecord('Email Parse Jobs', {
-            'Email Text': parseEmailText.trim(),
-            'Source Label': parseSourceLabel.trim(),
-            'Canvas Component': CANVAS_COMPONENT,
-            'Session ID': SESSION_ID,
-            'Status': 'Parsing',
-        });
-        setParseJobId(jobId);
-        setParseStatus('polling');
-        parseIntervalRef.current = setInterval(async () => {
-            const result = await listRecords('Email Parse Jobs', {
-                filterByFormula: `RECORD_ID()="${jobId}"`,
-                fields: ['Status', 'Item Count'],
-            });
-            const rec = result[0];
-            if (!rec) return;
-            const status = rec.fields['Status'] || '';
-            if (status === 'Done') {
-                clearInterval(parseIntervalRef.current);
-                setParseItemCount(rec.fields['Item Count'] || 0);
-                setParseStatus('done');
-                handleRefresh();
-            } else if (status === 'Failed') {
-                clearInterval(parseIntervalRef.current);
-                setParseStatus('failed');
-            }
-        }, 3000);
-    }
 
-    function closeParse() {
-        clearInterval(parseIntervalRef.current);
-        setParseModalOpen(false);
-        setParseEmailText('');
-        setParseSourceLabel('');
-        setParseJobId(null);
-        setParseStatus('idle');
-        setParseItemCount(0);
+    async function handlePushCode(plan) {
+        await updateRecord(PLANS_TABLE, plan.id, { 'Execute': true, 'Action Type': 'Push Code' });
     }
 
     async function handleRevert(plan) {
@@ -1708,7 +1913,7 @@ export default function App() {
                         <div style={{ display: 'flex', backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
                             {[
                                 { id: 'capture', label: 'Capture', badge: null },
-                                { id: 'queue', label: 'Queue', badge: openFeedback.length || null },
+                                { id: 'queue', label: 'Queue', badge: codeItems.length || null },
                                 { id: 'log', label: 'Log', badge: null },
                             ].map(({ id, label, badge }) => (
                                 <button key={id} onClick={() => setActiveTab(id)} style={{
@@ -1738,7 +1943,7 @@ export default function App() {
                         {/* Capture tab */}
                         {activeTab === 'capture' && (
                             <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-                                <FeedbackForm onCreated={() => setActiveTab('queue')} />
+                                <FeedbackForm onCreated={() => { handleRefresh(); setActiveTab('queue'); }} />
                             </div>
                         )}
 
@@ -1746,7 +1951,7 @@ export default function App() {
                         {activeTab === 'queue' && (
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                                 {/* Select all */}
-                                {openFeedback.length > 0 && (
+                                {codeItems.length > 0 && (
                                     <div
                                         onClick={toggleAll}
                                         style={{
@@ -1764,7 +1969,7 @@ export default function App() {
                                             {allChecked && <span style={{ color: '#fff', fontSize: 8, lineHeight: 1 }}>✓</span>}
                                         </div>
                                         <span style={{ fontSize: 12, color: '#6b7280' }}>
-                                            {checkedIds.size} of {openFeedback.length} selected
+                                            {checkedIds.size} of {codeItems.length} selected
                                         </span>
                                     </div>
                                 )}
@@ -1792,7 +1997,7 @@ export default function App() {
                                             {/* Action type pills */}
                                             {/* Action type pills — always visible */}
                                             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                                                {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary', 'Parse List'].map(action => {
+                                                {['Push Code', 'Save Plan'].map(action => {
                                                     const active = selectedAction === action;
                                                     return (
                                                         <button
@@ -1801,14 +2006,14 @@ export default function App() {
                                                             title={ACTION_TOOLTIPS[action]}
                                                             style={{
                                                                 fontSize: 11, fontWeight: active ? 600 : 500,
-                                                                backgroundColor: active ? '#111827' : '#f9fafb',
+                                                                backgroundColor: active ? ACTION_COLORS[action].bg : '#f9fafb',
                                                                 color: active ? '#ffffff' : '#374151',
-                                                                border: `1px solid ${active ? '#111827' : '#d1d5db'}`,
+                                                                border: `1px solid ${active ? ACTION_COLORS[action].bg : '#d1d5db'}`,
                                                                 borderRadius: 999, padding: '3px 10px',
                                                                 cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
                                                             }}
                                                         >
-                                                            {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : action === 'Parse List' ? '📧 ' : '✉ '}
+                                                            {action === 'Push Code' ? '⚡ ' : '📋 '}
                                                             {action}
                                                         </button>
                                                     );
@@ -1816,12 +2021,11 @@ export default function App() {
                                             </div>
                                             {/* Push button */}
                                             {(() => {
-                                                const parseList = selectedAction === 'Parse List';
-                                                const canAct = parseList || (checkedIds.size > 0 && !pushing);
+                                                const canAct = checkedIds.size > 0 && !pushing;
                                                 return (
                                                     <button
                                                         id="push-plan-button"
-                                                        onClick={() => parseList ? setParseModalOpen(true) : handlePushPlan()}
+                                                        onClick={handlePushPlan}
                                                         disabled={!canAct}
                                                         style={{
                                                             backgroundColor: canAct ? actionColor.bg : COLORS.pushPlanDisabledBg,
@@ -1834,7 +2038,7 @@ export default function App() {
                                                         onMouseEnter={e => { if (canAct) e.currentTarget.style.backgroundColor = actionColor.hover; }}
                                                         onMouseLeave={e => { if (canAct) e.currentTarget.style.backgroundColor = actionColor.bg; }}
                                                     >
-                                                        {pushing ? 'Pushing…' : `Push — ${selectedAction}`}
+                                                        {pushing ? 'Pushing…' : selectedAction === 'Push Code' ? '⚡ Push Code' : '📋 Save Plan'}
                                                     </button>
                                                 );
                                             })()}
@@ -1853,6 +2057,7 @@ export default function App() {
                                     reverting={reverting}
                                     revertedIds={revertedIds}
                                     onRevert={handleRevert}
+                                    onPushCode={handlePushCode}
                                 />
                             </div>
                         )}
@@ -1883,64 +2088,6 @@ export default function App() {
                     )}
                 </button>
             </div>
-            {/* Parse Email modal */}
-            {parseModalOpen && (
-                <div
-                    style={{ position: 'fixed', inset: 0, zIndex: 10001, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    onClick={e => { if (e.target === e.currentTarget && parseStatus === 'idle') closeParse(); }}
-                >
-                    <div style={{ background: '#fff', borderRadius: 12, padding: 20, width: 440, maxWidth: '94vw', boxShadow: '0 8px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        {(parseStatus === 'idle') && (<>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Parse Feedback List</span>
-                                <button onClick={closeParse} style={{ background: 'none', border: 'none', fontSize: 15, color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: 2 }}>✕</button>
-                            </div>
-                            <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Paste a list of feedback items. Each distinct item becomes a separate record.</p>
-                            <textarea
-                                value={parseEmailText}
-                                onChange={e => setParseEmailText(e.target.value)}
-                                rows={8}
-                                autoFocus
-                                placeholder="Paste items here..."
-                                style={{ width: '100%', fontSize: 13, color: '#111827', backgroundColor: '#f9fafb', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '10px 12px', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
-                            />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Source label (optional)</label>
-                                <input
-                                    value={parseSourceLabel}
-                                    onChange={e => setParseSourceLabel(e.target.value)}
-                                    placeholder='e.g. "Kim — Mar 5"'
-                                    style={{ fontSize: 13, color: '#111827', backgroundColor: '#f9fafb', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '8px 12px', boxSizing: 'border-box', fontFamily: 'inherit', width: '100%' }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                                <button onClick={closeParse} style={{ fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 8, border: '1px solid #d1d5db', backgroundColor: '#f9fafb', color: '#374151', cursor: 'pointer' }}>Cancel</button>
-                                <button onClick={handleParse} disabled={!parseEmailText.trim()} style={{ fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', backgroundColor: parseEmailText.trim() ? '#0f766e' : '#e5e7eb', color: parseEmailText.trim() ? '#ffffff' : '#9ca3af', cursor: parseEmailText.trim() ? 'pointer' : 'not-allowed' }}>Parse →</button>
-                            </div>
-                        </>)}
-                        {(parseStatus === 'creating' || parseStatus === 'polling') && (<>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Parsing feedback...</span>
-                            <p style={{ fontSize: 13, color: '#6b7280', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                ⏱ {parseStatus === 'creating' ? 'Creating parse job...' : <>AI is parsing your email <AnimatedDots /><span style={{ fontSize: 11, color: '#9ca3af' }}>(checking every 3s)</span></>}
-                            </p>
-                        </>)}
-                        {parseStatus === 'done' && (<>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>✓ {parseItemCount} item{parseItemCount !== 1 ? 's' : ''} created</span>
-                            <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Switch to Queue to review and push items.</p>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                <button onClick={() => { setActiveTab('queue'); closeParse(); }} style={{ fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', backgroundColor: '#111827', color: '#ffffff', cursor: 'pointer' }}>Go to Queue →</button>
-                            </div>
-                        </>)}
-                        {parseStatus === 'failed' && (<>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: '#991b1b' }}>✗ Parse failed</span>
-                            <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Check the Error field on the parse job record in Airtable.</p>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                <button onClick={closeParse} style={{ fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 8, border: '1px solid #d1d5db', backgroundColor: '#f9fafb', color: '#374151', cursor: 'pointer' }}>Close</button>
-                            </div>
-                        </>)}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
