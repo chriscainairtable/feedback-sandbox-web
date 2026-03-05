@@ -32,8 +32,8 @@ const COLORS = {
     socialProofStars: '#f59e0b',
 
     // CTA buttons
-    primary: '#2563eb',
-    primaryHover: '#1d4ed8',
+    primary: 'red',
+    primaryHover: '#cc0000',
     primaryText: '#ffffff',
     secondary: '#ffffff',
     secondaryBorder: '#d1d5db',
