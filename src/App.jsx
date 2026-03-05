@@ -1471,14 +1471,14 @@ export default function App() {
         'Create Tasks':  { bg: '#0891b2', hover: '#0e7490' },
         'Generate Spec': { bg: '#7c3aed', hover: '#6d28d9' },
         'Email Summary': { bg: '#d97706', hover: '#b45309' },
-        'Parse Email':   { bg: '#0f766e', hover: '#0d9488' },
+        'Parse List':    { bg: '#0f766e', hover: '#0d9488' },
     };
     const ACTION_TOOLTIPS = {
         'Code Change':   'Deploy visual changes to the canvas via Claude Code',
         'Create Tasks':  'Generate a numbered task list from the selected feedback',
         'Generate Spec': 'Write a product spec in markdown from the selected feedback',
         'Email Summary': 'Compose a stakeholder email summarizing the feedback',
-        'Parse Email':   'Parse a feedback email into individual feedback items',
+        'Parse List':    'Parse a list of feedback items into individual records',
     };
     const actionColor = ACTION_COLORS[selectedAction] || ACTION_COLORS['Code Change'];
     const [parseModalOpen, setParseModalOpen] = useState(false);
@@ -1792,7 +1792,7 @@ export default function App() {
                                             {/* Action type pills */}
                                             {checkedIds.size > 0 && (
                                                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                                                    {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary', 'Parse Email'].map(action => {
+                                                    {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary', 'Parse List'].map(action => {
                                                         const active = selectedAction === action;
                                                         return (
                                                             <button
@@ -1808,7 +1808,7 @@ export default function App() {
                                                                     cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
                                                                 }}
                                                             >
-                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : action === 'Parse Email' ? '📧 ' : '✉ '}
+                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : action === 'Parse List' ? '📧 ' : '✉ '}
                                                                 {action}
                                                             </button>
                                                         );
@@ -1818,7 +1818,7 @@ export default function App() {
                                             {/* Push button */}
                                             <button
                                                 id="push-plan-button"
-                                                onClick={() => selectedAction === 'Parse Email' ? setParseModalOpen(true) : handlePushPlan()}
+                                                onClick={() => selectedAction === 'Parse List' ? setParseModalOpen(true) : handlePushPlan()}
                                                 disabled={checkedIds.size === 0 || pushing}
                                                 style={{
                                                     backgroundColor: (checkedIds.size > 0 && !pushing) ? actionColor.bg : COLORS.pushPlanDisabledBg,
@@ -1887,16 +1887,16 @@ export default function App() {
                     <div style={{ background: '#fff', borderRadius: 12, padding: 20, width: 440, maxWidth: '94vw', boxShadow: '0 8px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 14 }}>
                         {(parseStatus === 'idle') && (<>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Parse Feedback Email</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Parse Feedback List</span>
                                 <button onClick={closeParse} style={{ background: 'none', border: 'none', fontSize: 15, color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: 2 }}>✕</button>
                             </div>
-                            <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Paste email or feedback text. Each distinct item becomes a separate feedback record.</p>
+                            <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Paste a list of feedback items. Each distinct item becomes a separate record.</p>
                             <textarea
                                 value={parseEmailText}
                                 onChange={e => setParseEmailText(e.target.value)}
                                 rows={8}
                                 autoFocus
-                                placeholder="Paste email text here..."
+                                placeholder="Paste items here..."
                                 style={{ width: '100%', fontSize: 13, color: '#111827', backgroundColor: '#f9fafb', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '10px 12px', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
                             />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
