@@ -159,29 +159,6 @@ const PRIORITY_PILL_COLORS = {
     High:   { bg: COLORS.pillHighBg,   border: COLORS.pillHighBorder,   text: COLORS.pillHighText },
 };
 
-// ─── Section Header ────────────────────────────────────────────────────────────
-
-function SectionHeader({ label, count }) {
-    return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{
-                fontSize: SIZES.sectionLabelFontSize, fontWeight: 700,
-                color: COLORS.sectionHeadingText, letterSpacing: '0.06em', textTransform: 'uppercase',
-            }}>
-                {label}
-            </span>
-            {count != null && (
-                <span style={{
-                    fontSize: 11, fontWeight: 600,
-                    backgroundColor: '#e5e7eb', color: '#374151',
-                    borderRadius: 999, padding: '1px 7px',
-                }}>
-                    {count}
-                </span>
-            )}
-        </div>
-    );
-}
 
 // ─── Feedback Form ─────────────────────────────────────────────────────────────
 
@@ -1068,6 +1045,9 @@ export default function App() {
         // eslint-disable-next-line no-unused-vars
         } catch (_) { return new Set(); }
     });
+    const [fabOpen, setFabOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('capture');
+    const fabRef = useRef(null);
 
     // Poll both tables on mount and every POLL_INTERVAL ms
     useEffect(() => {
@@ -1106,10 +1086,21 @@ export default function App() {
         return () => clearInterval(id);
     }, []);
 
+    // Click outside FAB panel to close
+    useEffect(() => {
+        if (!fabOpen) return;
+        function handleClick(e) {
+            if (fabRef.current && !fabRef.current.contains(e.target)) {
+                setFabOpen(false);
+            }
+        }
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, [fabOpen]);
+
     const sortedPlans = [...allPlans].sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
     const executingPlan = sortedPlans.find(p => (p.fields['Plan Status'] || '') === 'Executing') || null;
 
-    // Only show items that haven't been linked to a plan yet
     const openFeedback = allFeedback.filter(r => {
         const linked = r.fields['Version'];
         return !linked || linked.length === 0;
@@ -1118,6 +1109,8 @@ export default function App() {
     const executingItems = executingPlan
         ? allFeedback.filter(r => matchesRecordId(r.fields['Version'], executingPlan.id))
         : [];
+
+    const allChecked = openFeedback.length > 0 && checkedIds.size === openFeedback.length;
 
     function toggleChecked(id) {
         setCheckedIds(prev => {
@@ -1128,11 +1121,17 @@ export default function App() {
         });
     }
 
+    function toggleAll() {
+        if (openFeedback.length > 0 && checkedIds.size === openFeedback.length) {
+            setCheckedIds(new Set());
+        } else {
+            setCheckedIds(new Set(openFeedback.map(r => r.id)));
+        }
+    }
+
     async function handlePushPlan() {
         if (checkedIds.size === 0 || pushing) return;
         setPushing(true);
-
-        // Always create a new plan record for each push
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -1140,20 +1139,17 @@ export default function App() {
             'Plan Name': `Plan — ${dateStr}, ${timeStr}`,
             'Plan Status': 'New',
         });
-
-        // Bundle checked feedback items to the plan
         const updates = [...checkedIds].map(id => {
             const record = openFeedback.find(r => r.id === id);
             if (!record) return Promise.resolve();
             return updateRecord(FEEDBACK_TABLE, record.id, { 'Version': [planId] });
         });
         await Promise.all(updates);
-
-        // Execute the plan
         await updateRecord(PLANS_TABLE, planId, { 'Execute': true });
         setCheckedIds(new Set());
         setPushing(false);
         handleRefresh();
+        setActiveTab('log');
     }
 
     async function handleRevert(plan) {
@@ -1173,107 +1169,190 @@ export default function App() {
         }
     }
 
-    // Trigger an immediate re-poll after a create/edit/delete
     function handleRefresh() {
         listRecords(FEEDBACK_TABLE).then(fb => setAllFeedback(fb)).catch(() => {});
         listRecords(PLANS_TABLE).then(plans => setAllPlans(plans)).catch(() => {});
     }
 
     return (
-        <div style={{
-            display: 'flex', height: '100vh', overflow: 'hidden',
-            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-        }}>
-            {/* ── Left pane ── */}
-            <div data-feedback-panel="true" style={{
-                width: SIZES.leftPaneWidth, flexShrink: 0,
-                backgroundColor: COLORS.leftBg,
-                borderRight: `1px solid ${COLORS.leftBorder}`,
-                display: 'flex', flexDirection: 'column', overflow: 'hidden',
-            }}>
-                {/* Add Feedback */}
-                <div style={{ padding: SIZES.leftPadding, borderBottom: `1px solid ${COLORS.leftBorder}`, flexShrink: 0 }}>
-                    <div style={{ marginBottom: SIZES.sectionHeaderGap }}>
-                        <SectionHeader label="Add Feedback" />
-                    </div>
-                    <FeedbackForm onCreated={handleRefresh} />
-                </div>
-
-                {/* Open Feedback + Versions — scrollable */}
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: SIZES.leftPadding, borderBottom: `1px solid ${COLORS.leftBorder}` }}>
-                        <div style={{ marginBottom: SIZES.sectionHeaderGap }}>
-                            <SectionHeader label="Open Feedback" count={openFeedback.length} />
-                        </div>
-                        <OpenFeedbackList
-                            openFeedback={openFeedback}
-                            checkedIds={checkedIds}
-                            onToggle={toggleChecked}
-                            onRefresh={handleRefresh}
-                        />
-                    </div>
-                    <div style={{ padding: SIZES.leftPadding }}>
-                        <div style={{ marginBottom: SIZES.sectionHeaderGap }}>
-                            <SectionHeader label="Versions" />
-                        </div>
-                        <VersionsList
-                            plans={sortedPlans}
-                            allFeedback={allFeedback}
-                            reverting={reverting}
-                            revertedIds={revertedIds}
-                            onRevert={handleRevert}
-                        />
-                    </div>
-                </div>
-
-                {/* Footer — sticky bottom */}
-                <div style={{
-                    padding: `10px ${SIZES.leftPadding}px`, borderTop: checkedIds.size > 0 ? '2px solid #2563eb' : `1px solid ${COLORS.leftBorder}`,
-                    flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                    minHeight: 44,
-                }}>
-                    {executingPlan ? (
-                        <span style={{ fontSize: 12, color: '#d97706', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 2 }}>
-                            Applying {executingItems.length} change{executingItems.length !== 1 ? 's' : ''}<AnimatedDots />
-                        </span>
-                    ) : (
-                        <>
-                            <span style={{ fontSize: 12, color: checkedIds.size > 0 ? COLORS.sectionSubText : '#9ca3af', whiteSpace: 'nowrap' }}>
-                                {checkedIds.size > 0 ? `${checkedIds.size} of ${openFeedback.length} selected` : 'Select items to push'}
-                            </span>
-                            <button
-                                id="push-plan-button"
-                                onClick={handlePushPlan}
-                                disabled={checkedIds.size === 0 || pushing}
-                                style={{
-                                    backgroundColor: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanBg : COLORS.pushPlanDisabledBg,
-                                    color: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanText : COLORS.pushPlanDisabledText,
-                                    border: 'none', borderRadius: SIZES.inputRadius,
-                                    padding: '7px 14px', fontSize: 13, fontWeight: 600,
-                                    cursor: (checkedIds.size > 0 && !pushing) ? 'pointer' : 'not-allowed',
-                                    whiteSpace: 'nowrap', transition: 'background-color 0.12s',
-                                }}
-                                onMouseEnter={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanHover; }}
-                                onMouseLeave={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanBg; }}
-                            >
-                                {pushing ? 'Pushing…' : 'Push Changes'}
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* ── Right pane ── */}
+        <div style={{ height: '100vh', overflow: 'hidden', position: 'relative', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+            {/* Full-viewport demo canvas */}
             <div
                 id="page-background"
                 style={{
-                    flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                    width: '100%', height: '100%',
                     backgroundColor: COLORS.background,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    overflow: 'auto',
                 }}
             >
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, overflow: 'auto', minHeight: 0 }}>
-                    <AcmeLandingCard />
-                </div>
+                <AcmeLandingCard />
+            </div>
+
+            {/* ── Floating Action Bar ── */}
+            <div
+                data-feedback-panel="true"
+                ref={fabRef}
+                style={{ position: 'fixed', bottom: 24, left: 24, zIndex: 1000 }}
+            >
+                {/* Panel — opens upward */}
+                {fabOpen && (
+                    <div style={{
+                        position: 'absolute', bottom: '100%', left: 0, marginBottom: 8,
+                        width: 300, maxHeight: 480,
+                        borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                        backgroundColor: '#ffffff',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                    }}>
+                        {/* Tab bar */}
+                        <div style={{ display: 'flex', backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                            {[
+                                { id: 'capture', label: 'Capture', badge: null },
+                                { id: 'queue', label: 'Queue', badge: openFeedback.length || null },
+                                { id: 'log', label: 'Log', badge: null },
+                            ].map(({ id, label, badge }) => (
+                                <button key={id} onClick={() => setActiveTab(id)} style={{
+                                    flex: 1, padding: '9px 4px', fontSize: 12,
+                                    fontWeight: activeTab === id ? 700 : 500,
+                                    color: activeTab === id ? '#111827' : '#6b7280',
+                                    background: 'none', border: 'none',
+                                    borderBottom: `2px solid ${activeTab === id ? '#111827' : 'transparent'}`,
+                                    cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                }}>
+                                    {label}
+                                    {badge != null && badge > 0 && (
+                                        <span style={{
+                                            fontSize: 10, fontWeight: 600,
+                                            backgroundColor: activeTab === id ? '#111827' : '#e5e7eb',
+                                            color: activeTab === id ? '#fff' : '#374151',
+                                            borderRadius: 999, padding: '1px 5px', lineHeight: '14px',
+                                        }}>
+                                            {badge}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Capture tab */}
+                        {activeTab === 'capture' && (
+                            <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+                                <FeedbackForm onCreated={() => setActiveTab('queue')} />
+                            </div>
+                        )}
+
+                        {/* Queue tab */}
+                        {activeTab === 'queue' && (
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                {/* Select all */}
+                                {openFeedback.length > 0 && (
+                                    <div
+                                        onClick={toggleAll}
+                                        style={{
+                                            padding: '7px 12px', borderBottom: '1px solid #f3f4f6',
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                                            border: `2px solid ${allChecked ? '#2563eb' : '#d1d5db'}`,
+                                            backgroundColor: allChecked ? '#2563eb' : '#ffffff',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            {allChecked && <span style={{ color: '#fff', fontSize: 8, lineHeight: 1 }}>✓</span>}
+                                        </div>
+                                        <span style={{ fontSize: 12, color: '#6b7280' }}>
+                                            {checkedIds.size} of {openFeedback.length} selected
+                                        </span>
+                                    </div>
+                                )}
+                                {/* List */}
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
+                                    <OpenFeedbackList
+                                        openFeedback={openFeedback}
+                                        checkedIds={checkedIds}
+                                        onToggle={toggleChecked}
+                                        onRefresh={handleRefresh}
+                                    />
+                                </div>
+                                {/* Footer */}
+                                <div style={{
+                                    padding: '8px 12px',
+                                    borderTop: checkedIds.size > 0 ? '2px solid #2563eb' : '1px solid #e5e7eb',
+                                    flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                                }}>
+                                    {executingPlan ? (
+                                        <span style={{ fontSize: 12, color: '#d97706', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            Applying {executingItems.length} change{executingItems.length !== 1 ? 's' : ''}<AnimatedDots />
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span style={{ fontSize: 12, color: checkedIds.size > 0 ? COLORS.sectionSubText : '#9ca3af', whiteSpace: 'nowrap' }}>
+                                                {checkedIds.size > 0 ? `${checkedIds.size} of ${openFeedback.length} selected` : 'Select items to push'}
+                                            </span>
+                                            <button
+                                                id="push-plan-button"
+                                                onClick={handlePushPlan}
+                                                disabled={checkedIds.size === 0 || pushing}
+                                                style={{
+                                                    backgroundColor: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanBg : COLORS.pushPlanDisabledBg,
+                                                    color: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanText : COLORS.pushPlanDisabledText,
+                                                    border: 'none', borderRadius: SIZES.inputRadius,
+                                                    padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                                                    cursor: (checkedIds.size > 0 && !pushing) ? 'pointer' : 'not-allowed',
+                                                    whiteSpace: 'nowrap', transition: 'background-color 0.12s',
+                                                }}
+                                                onMouseEnter={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanHover; }}
+                                                onMouseLeave={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanBg; }}
+                                            >
+                                                {pushing ? 'Pushing…' : 'Push →'}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Log tab */}
+                        {activeTab === 'log' && (
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
+                                <VersionsList
+                                    plans={sortedPlans}
+                                    allFeedback={allFeedback}
+                                    reverting={reverting}
+                                    revertedIds={revertedIds}
+                                    onRevert={handleRevert}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* FAB pill button */}
+                <button
+                    onClick={() => setFabOpen(o => !o)}
+                    style={{
+                        backgroundColor: '#111827', color: '#ffffff',
+                        border: 'none', borderRadius: 999,
+                        padding: '9px 16px', fontSize: 13, fontWeight: 600,
+                        cursor: 'pointer', userSelect: 'none',
+                        boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        transition: 'box-shadow 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.25)'; }}
+                >
+                    <span>✦</span>
+                    <span>Feedback</span>
+                    {executingPlan && (
+                        <span style={{ color: '#fbbf24', display: 'flex', alignItems: 'center' }}>
+                            · Applying<AnimatedDots />
+                        </span>
+                    )}
+                </button>
             </div>
         </div>
     );
