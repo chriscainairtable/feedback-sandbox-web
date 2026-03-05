@@ -101,7 +101,6 @@ const COLORS = {
     roadmapBarDefine: '#d97706',
     roadmapBarDiscover: '#0891b2',
     roadmapText: '#111827',
-    roadmapDynamicRoutingLabel: '#ef4444',
     roadmapMuted: '#6b7280',
 
 };
@@ -1425,7 +1424,7 @@ function WalmartRoadmapCard() {
     const qw = 100 / 6;
     const todayPct = qw * 1.35; // ~mid Q2
 
-    function TimelineRow({ id, left, width, color, dashed, badge, badgeColor, label, subLabel, labelColor, onEnter }) {
+    function TimelineRow({ id, left, width, color, dashed, badge, badgeColor, label, subLabel, onEnter }) {
         return (
             <div
                 id={id}
@@ -1444,7 +1443,7 @@ function WalmartRoadmapCard() {
                 }}
             >
                 {badge && <StatusBadge label={badge} color={badgeColor || 'grey'} />}
-                <span style={{ fontSize: 12, fontWeight: 500, color: dashed ? '#6b7280' : (labelColor || '#ffffff'), flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: dashed ? '#6b7280' : '#ffffff', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
                 {subLabel && <span style={{ fontSize: 11, color: dashed ? '#9ca3af' : 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', flexShrink: 0 }}>{subLabel}</span>}
             </div>
         );
@@ -1657,7 +1656,6 @@ function WalmartRoadmapCard() {
                             color={COLORS.roadmapBarGreen}
                             badge="Develop (Committed)" badgeColor="green"
                             label="Dynamic Routing ML Model" subLabel="L - 3 Quarters"
-                            labelColor={COLORS.roadmapDynamicRoutingLabel}
                             onEnter={e => {
                                 const r = e.currentTarget.getBoundingClientRect();
                                 setDetailBar({ x: r.left, y: r.top, h: r.height });
