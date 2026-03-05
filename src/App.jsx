@@ -141,7 +141,7 @@ const SIZES = {
     pillRadius: 999,
 
     // Walmart Roadmap canvas
-    roadmapLeftColWidth: 240,
+    roadmapLeftColWidth: 280,
     roadmapRowHeight: 48,
     roadmapBarHeight: 28,
     roadmapBarRadius: 4,
@@ -983,6 +983,7 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
 
 // ─── Acme Landing Card ─────────────────────────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars
 function AcmeLandingCard() {
     return (
         <div
@@ -1123,17 +1124,17 @@ function WalmartRoadmapCard() {
         );
     }
 
-    function InitiativeRow({ leftContent, timelineContent, isHeader }) {
+    function InitiativeRow({ leftContent, timelineContent }) {
         return (
-            <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', backgroundColor: isHeader ? '#f9fafb' : '#ffffff' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', backgroundColor: '#ffffff', minHeight: SIZES.roadmapRowHeight }}>
                 <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0 }}>{leftContent}</div>
-                <div style={{ flex: 1, position: 'relative', height: SIZES.roadmapRowHeight }}>{timelineContent}</div>
+                <div style={{ flex: 1, position: 'relative' }}>{timelineContent}</div>
             </div>
         );
     }
 
     return (
-        <div style={{ width: '100%', height: '100%', backgroundColor: COLORS.roadmapBg, overflow: 'auto', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+        <div style={{ width: '100%', height: '100%', backgroundColor: COLORS.roadmapBg, overflow: 'auto', fontFamily: 'ui-sans-serif, system-ui, sans-serif', minWidth: 900, paddingBottom: 80, boxSizing: 'border-box' }}>
 
             {/* Hover detail card */}
             {detailBar && createPortal(
@@ -1207,7 +1208,7 @@ function WalmartRoadmapCard() {
             </div>
 
             {/* Initiative Row 1 */}
-            <div id="initiative-row-1">
+            <div id="initiative-row-1" style={{ borderBottom: '2px solid #e5e7eb' }}>
                 {/* Group header */}
                 <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
                     <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '12px 24px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
@@ -1266,7 +1267,7 @@ function WalmartRoadmapCard() {
             </div>
 
             {/* Initiative Row 2 */}
-            <div id="initiative-row-2">
+            <div id="initiative-row-2" style={{ borderBottom: '2px solid #e5e7eb' }}>
                 <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
                     <div style={{ width: SIZES.roadmapLeftColWidth, flexShrink: 0, padding: '12px 24px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
                         ▼ 1-Click automated setup of entire supplier catalogs
