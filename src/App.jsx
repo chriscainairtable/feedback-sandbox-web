@@ -541,6 +541,16 @@ function SnipTooltip({ ctx, pos }) {
 
 // ─── Open Feedback List ────────────────────────────────────────────────────────
 
+const CATEGORY_COLORS = {
+    visual:        { bg: '#dbeafe', text: '#1e40af' },
+    content:       { bg: '#dcfce7', text: '#166534' },
+    schema:        { bg: '#fef9c3', text: '#854d0e' },
+    logic:         { bg: '#f3e8ff', text: '#6b21a8' },
+    data:          { bg: '#fee2e2', text: '#991b1b' },
+    ux:            { bg: '#ffedd5', text: '#9a3412' },
+    documentation: { bg: '#f1f5f9', text: '#475569' },
+};
+
 function OpenFeedbackList({ openFeedback, checkedIds, onToggle, onRefresh }) {
     const [hoveredId, setHoveredId] = useState(null);
     const [tooltipData, setTooltipData] = useState(null);
@@ -714,6 +724,8 @@ function OpenFeedbackList({ openFeedback, checkedIds, onToggle, onRefresh }) {
                             const feedbackText = record.fields['Feedback Text'] || '';
                             const priority = record.fields['Priority'] || null;
                             const pColors = priority ? PRIORITY_PILL_COLORS[priority] : null;
+                            const category = record.fields['Feedback Category'] || '';
+                            const claudeCodeReady = record.fields['Claude Code Ready'] || null;
                             const snipCtxRaw = record.fields['Snip Context'] || '';
                             const hasSnip = !!snipCtxRaw;
                             let parsedSnipCtx = null;
@@ -778,16 +790,27 @@ function OpenFeedbackList({ openFeedback, checkedIds, onToggle, onRefresh }) {
                                                 </svg>
                                             )}
                                         </div>
-                                        {priority && pColors && (
-                                            <span style={{
-                                                fontSize: 10, fontWeight: 600, borderRadius: 999,
-                                                backgroundColor: pColors.bg, color: pColors.text,
-                                                border: `1px solid ${pColors.border}`, padding: '2px 6px',
-                                                alignSelf: 'flex-start',
-                                            }}>
-                                                {priority}
-                                            </span>
-                                        )}
+                                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                            {priority && pColors && (
+                                                <span style={{
+                                                    fontSize: 10, fontWeight: 600, borderRadius: 999,
+                                                    backgroundColor: pColors.bg, color: pColors.text,
+                                                    border: `1px solid ${pColors.border}`, padding: '2px 6px',
+                                                }}>
+                                                    {priority}
+                                                </span>
+                                            )}
+                                            {category && CATEGORY_COLORS[category] && (
+                                                <span style={{
+                                                    fontSize: 10, fontWeight: 600, borderRadius: 999,
+                                                    backgroundColor: CATEGORY_COLORS[category].bg,
+                                                    color: CATEGORY_COLORS[category].text,
+                                                    padding: '2px 6px',
+                                                }}>
+                                                    {category}{!claudeCodeReady && <span title="Not recommended for Code Change"> ⚠</span>}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -1448,14 +1471,23 @@ export default function App() {
         'Create Tasks':  { bg: '#0891b2', hover: '#0e7490' },
         'Generate Spec': { bg: '#7c3aed', hover: '#6d28d9' },
         'Email Summary': { bg: '#d97706', hover: '#b45309' },
+        'Parse Email':   { bg: '#0f766e', hover: '#0d9488' },
     };
     const ACTION_TOOLTIPS = {
         'Code Change':   'Deploy visual changes to the canvas via Claude Code',
         'Create Tasks':  'Generate a numbered task list from the selected feedback',
         'Generate Spec': 'Write a product spec in markdown from the selected feedback',
         'Email Summary': 'Compose a stakeholder email summarizing the feedback',
+        'Parse Email':   'Parse a feedback email into individual feedback items',
     };
     const actionColor = ACTION_COLORS[selectedAction] || ACTION_COLORS['Code Change'];
+    const [parseModalOpen, setParseModalOpen] = useState(false);
+    const [parseEmailText, setParseEmailText] = useState('');
+    const [parseSourceLabel, setParseSourceLabel] = useState('');
+    const [parseJobId, setParseJobId] = useState(null); // eslint-disable-line no-unused-vars
+    const [parseStatus, setParseStatus] = useState('idle'); // 'idle' | 'creating' | 'polling' | 'done' | 'failed'
+    const [parseItemCount, setParseItemCount] = useState(0);
+    const parseIntervalRef = useRef(null);
     const [reverting, setReverting] = useState(null);
     const [revertedIds, setRevertedIds] = useState(() => {
         try {
@@ -1578,6 +1610,48 @@ export default function App() {
         setPushing(false);
         handleRefresh();
         setActiveTab('log');
+    }
+
+    async function handleParse() {
+        if (!parseEmailText.trim()) return;
+        setParseStatus('creating');
+        const jobId = await createRecord('Email Parse Jobs', {
+            'Email Text': parseEmailText.trim(),
+            'Source Label': parseSourceLabel.trim(),
+            'Canvas Component': CANVAS_COMPONENT,
+            'Session ID': SESSION_ID,
+            'Status': 'Parsing',
+        });
+        setParseJobId(jobId);
+        setParseStatus('polling');
+        parseIntervalRef.current = setInterval(async () => {
+            const result = await listRecords('Email Parse Jobs', {
+                filterByFormula: `RECORD_ID()="${jobId}"`,
+                fields: ['Status', 'Item Count'],
+            });
+            const rec = result[0];
+            if (!rec) return;
+            const status = rec.fields['Status'] || '';
+            if (status === 'Done') {
+                clearInterval(parseIntervalRef.current);
+                setParseItemCount(rec.fields['Item Count'] || 0);
+                setParseStatus('done');
+                handleRefresh();
+            } else if (status === 'Failed') {
+                clearInterval(parseIntervalRef.current);
+                setParseStatus('failed');
+            }
+        }, 3000);
+    }
+
+    function closeParse() {
+        clearInterval(parseIntervalRef.current);
+        setParseModalOpen(false);
+        setParseEmailText('');
+        setParseSourceLabel('');
+        setParseJobId(null);
+        setParseStatus('idle');
+        setParseItemCount(0);
     }
 
     async function handleRevert(plan) {
@@ -1718,7 +1792,7 @@ export default function App() {
                                             {/* Action type pills */}
                                             {checkedIds.size > 0 && (
                                                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                                                    {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary'].map(action => {
+                                                    {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary', 'Parse Email'].map(action => {
                                                         const active = selectedAction === action;
                                                         return (
                                                             <button
@@ -1734,7 +1808,7 @@ export default function App() {
                                                                     cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
                                                                 }}
                                                             >
-                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : '✉ '}
+                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '+ ' : action === 'Generate Spec' ? '📄 ' : action === 'Parse Email' ? '📧 ' : '✉ '}
                                                                 {action}
                                                             </button>
                                                         );
@@ -1744,7 +1818,7 @@ export default function App() {
                                             {/* Push button */}
                                             <button
                                                 id="push-plan-button"
-                                                onClick={handlePushPlan}
+                                                onClick={() => selectedAction === 'Parse Email' ? setParseModalOpen(true) : handlePushPlan()}
                                                 disabled={checkedIds.size === 0 || pushing}
                                                 style={{
                                                     backgroundColor: (checkedIds.size > 0 && !pushing) ? actionColor.bg : COLORS.pushPlanDisabledBg,
@@ -1804,6 +1878,64 @@ export default function App() {
                     )}
                 </button>
             </div>
+            {/* Parse Email modal */}
+            {parseModalOpen && (
+                <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 10001, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={e => { if (e.target === e.currentTarget && parseStatus === 'idle') closeParse(); }}
+                >
+                    <div style={{ background: '#fff', borderRadius: 12, padding: 20, width: 440, maxWidth: '94vw', boxShadow: '0 8px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {(parseStatus === 'idle') && (<>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Parse Feedback Email</span>
+                                <button onClick={closeParse} style={{ background: 'none', border: 'none', fontSize: 15, color: '#9ca3af', cursor: 'pointer', lineHeight: 1, padding: 2 }}>✕</button>
+                            </div>
+                            <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Paste email or feedback text. Each distinct item becomes a separate feedback record.</p>
+                            <textarea
+                                value={parseEmailText}
+                                onChange={e => setParseEmailText(e.target.value)}
+                                rows={8}
+                                autoFocus
+                                placeholder="Paste email text here..."
+                                style={{ width: '100%', fontSize: 13, color: '#111827', backgroundColor: '#f9fafb', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '10px 12px', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Source label (optional)</label>
+                                <input
+                                    value={parseSourceLabel}
+                                    onChange={e => setParseSourceLabel(e.target.value)}
+                                    placeholder='e.g. "Kim — Mar 5"'
+                                    style={{ fontSize: 13, color: '#111827', backgroundColor: '#f9fafb', border: '1.5px solid #d1d5db', borderRadius: 8, padding: '8px 12px', boxSizing: 'border-box', fontFamily: 'inherit', width: '100%' }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                                <button onClick={closeParse} style={{ fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 8, border: '1px solid #d1d5db', backgroundColor: '#f9fafb', color: '#374151', cursor: 'pointer' }}>Cancel</button>
+                                <button onClick={handleParse} disabled={!parseEmailText.trim()} style={{ fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', backgroundColor: parseEmailText.trim() ? '#0f766e' : '#e5e7eb', color: parseEmailText.trim() ? '#ffffff' : '#9ca3af', cursor: parseEmailText.trim() ? 'pointer' : 'not-allowed' }}>Parse →</button>
+                            </div>
+                        </>)}
+                        {(parseStatus === 'creating' || parseStatus === 'polling') && (<>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Parsing feedback...</span>
+                            <p style={{ fontSize: 13, color: '#6b7280', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                ⏱ {parseStatus === 'creating' ? 'Creating parse job...' : <>AI is parsing your email <AnimatedDots /><span style={{ fontSize: 11, color: '#9ca3af' }}>(checking every 3s)</span></>}
+                            </p>
+                        </>)}
+                        {parseStatus === 'done' && (<>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>✓ {parseItemCount} item{parseItemCount !== 1 ? 's' : ''} created</span>
+                            <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Switch to Queue to review and push items.</p>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button onClick={() => { setActiveTab('queue'); closeParse(); }} style={{ fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', backgroundColor: '#111827', color: '#ffffff', cursor: 'pointer' }}>Go to Queue →</button>
+                            </div>
+                        </>)}
+                        {parseStatus === 'failed' && (<>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#991b1b' }}>✗ Parse failed</span>
+                            <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Check the Error field on the parse job record in Airtable.</p>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button onClick={closeParse} style={{ fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 8, border: '1px solid #d1d5db', backgroundColor: '#f9fafb', color: '#374151', cursor: 'pointer' }}>Close</button>
+                            </div>
+                        </>)}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
