@@ -1126,7 +1126,6 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert, on
                 const actionStatus = plan.fields['Action Status'] || '';
                 const actionOutput = plan.fields['Action Output'] || '';
                 const isNonCodeChange = actionType !== 'Code Change' && actionType !== 'Push Code';
-                const isSavePlan = isQueued && actionType === 'Save Plan';
                 const isRunning = isNonCodeChange && actionStatus === 'Running';
                 const isActionDone = isNonCodeChange && actionStatus === 'Done';
                 const isActionFailed = isNonCodeChange && actionStatus === 'Failed';
@@ -1135,6 +1134,7 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert, on
                 const isReverting = status === 'Reverting';
                 const isDone = status === 'Done' || status === 'Approved';
                 const isQueued = status === 'New';
+                const isSavePlan = isQueued && actionType === 'Save Plan';
                 const isReverted = status === 'Reverted' || revertedIds.has(plan.id);
                 const canRevert = !isReverted && !isReverting && !isNonCodeChange && (revertablePlan?.id === plan.id || isQueued);
                 const runUrl = plan.fields['GitHub Run URL'] || null;
