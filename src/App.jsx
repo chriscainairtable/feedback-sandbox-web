@@ -103,6 +103,16 @@ const COLORS = {
     roadmapText: '#111827',
     roadmapMuted: '#6b7280',
 
+    // Action type colors
+    actionCodeChange: '#111827',
+    actionCreateTasks: '#0891b2',
+    actionGenerateSpec: '#7c3aed',
+    actionEmailSummary: '#d97706',
+    actionPending: '#9ca3af',
+    actionRunning: '#d97706',
+    actionDone: '#16a34a',
+    actionFailed: '#dc2626',
+
 };
 
 const SIZES = {
@@ -862,12 +872,20 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
             {versionPlans.map(plan => {
                 const status = plan.fields['Plan Status'] || '';
                 const planName = plan.fields['Plan Name'] || '';
+                const actionType = plan.fields['Action Type'] || 'Code Change';
+                const actionStatus = plan.fields['Action Status'] || '';
+                const actionOutput = plan.fields['Action Output'] || '';
+                const isNonCodeChange = actionType !== 'Code Change';
+                const isRunning = isNonCodeChange && actionStatus === 'Running';
+                const isActionDone = isNonCodeChange && actionStatus === 'Done';
+                const isActionFailed = isNonCodeChange && actionStatus === 'Failed';
+                const actionIcon = { 'Code Change': '⚡', 'Create Tasks': '✓', 'Generate Spec': '📄', 'Email Summary': '✉' }[actionType] || '⚡';
                 const isExecuting = status === 'Executing';
                 const isReverting = status === 'Reverting';
                 const isDone = status === 'Done' || status === 'Approved';
                 const isQueued = status === 'New';
                 const isReverted = status === 'Reverted' || revertedIds.has(plan.id);
-                const canRevert = !isReverted && !isReverting && (revertablePlan?.id === plan.id || isQueued);
+                const canRevert = !isReverted && !isReverting && !isNonCodeChange && (revertablePlan?.id === plan.id || isQueued);
                 const runUrl = plan.fields['GitHub Run URL'] || null;
                 const timeLabel = isExecuting
                     ? relativeTime(plan.fields['Executing At']) || relativeTime(plan.createdTime)
@@ -876,9 +894,15 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                         : relativeTime(plan.createdTime);
 
                 const items = allFeedback.filter(r => matchesRecordId(r.fields['Version'], plan.id));
-                const borderColor = isExecuting || isReverting ? '#fde68a' : isReverted ? '#e5e7eb' : isDone ? '#bbf7d0' : isQueued ? '#e5e7eb' : '#fecaca';
-                const headerBg   = isExecuting || isReverting ? '#fffbeb' : isReverted ? '#f9fafb' : isDone ? '#f0fdf4' : isQueued ? '#f9fafb' : '#fef2f2';
-                const badgeColor = isExecuting || isReverting ? '#92400e' : isReverted ? '#6b7280' : isDone ? '#166534' : isQueued ? '#6b7280' : '#991b1b';
+                const borderColor = isNonCodeChange
+                    ? (isRunning ? '#fde68a' : isActionDone ? '#bbf7d0' : isActionFailed ? '#fecaca' : '#e5e7eb')
+                    : (isExecuting || isReverting ? '#fde68a' : isReverted ? '#e5e7eb' : isDone ? '#bbf7d0' : isQueued ? '#e5e7eb' : '#fecaca');
+                const headerBg = isNonCodeChange
+                    ? (isRunning ? '#fffbeb' : isActionDone ? '#f0fdf4' : isActionFailed ? '#fef2f2' : '#f9fafb')
+                    : (isExecuting || isReverting ? '#fffbeb' : isReverted ? '#f9fafb' : isDone ? '#f0fdf4' : isQueued ? '#f9fafb' : '#fef2f2');
+                const badgeColor = isNonCodeChange
+                    ? (isRunning ? '#92400e' : isActionDone ? '#166534' : isActionFailed ? '#991b1b' : '#6b7280')
+                    : (isExecuting || isReverting ? '#92400e' : isReverted ? '#6b7280' : isDone ? '#166534' : isQueued ? '#6b7280' : '#991b1b');
                 return (
                     <div key={plan.id} style={{ border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden' }}>
                         {/* Plan header row */}
@@ -895,7 +919,18 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                         >
                             <span className={isQueued ? 'badge-queued' : undefined}
                                 style={{ fontSize: 10, fontWeight: 700, color: badgeColor, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
-                                {isExecuting ? <>Applying<AnimatedDots /></> : isReverting ? <>Reverting<AnimatedDots /></> : isReverted ? '↩ Reverted' : isDone ? '✓ Done' : isQueued ? '● Queued' : '✗ Failed'}
+                                {isNonCodeChange
+                                    ? (isRunning ? <>Running<AnimatedDots /></> : isActionDone ? '✓ Done' : isActionFailed ? '✗ Failed' : '● Pending')
+                                    : (isExecuting ? <>Applying<AnimatedDots /></> : isReverting ? <>Reverting<AnimatedDots /></> : isReverted ? '↩ Reverted' : isDone ? '✓ Done' : isQueued ? '● Queued' : '✗ Failed')}
+                            </span>
+                            <span style={{
+                                fontSize: 10, color: '#9ca3af',
+                                backgroundColor: '#f3f4f6',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: 999, padding: '1px 6px',
+                                flexShrink: 0,
+                            }}>
+                                {actionIcon} {actionType}
                             </span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{
@@ -976,6 +1011,26 @@ function VersionsList({ plans, allFeedback, reverting, revertedIds, onRevert }) 
                                     color: '#78350f', lineHeight: 1.5, whiteSpace: 'pre-wrap',
                                     wordBreak: 'break-word', maxHeight: 80, overflowY: 'auto',
                                 }}>{plan.fields['Execution Log']}</pre>
+                            </div>
+                        )}
+                        {/* Action Output — for non-Code-Change plans */}
+                        {isNonCodeChange && actionOutput && (
+                            <div style={{
+                                padding: '8px 10px',
+                                borderTop: '1px solid #f3f4f6',
+                                backgroundColor: '#fafafa',
+                            }}>
+                                <pre style={{
+                                    margin: 0, fontSize: 10,
+                                    color: '#6b7280',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+                                    maxHeight: 120,
+                                    overflowY: 'auto',
+                                }}>
+                                    {actionOutput}
+                                </pre>
                             </div>
                         )}
                     </div>
@@ -1397,6 +1452,7 @@ export default function App() {
     const [allPlans, setAllPlans] = useState([]);
     const [checkedIds, setCheckedIds] = useState(new Set());
     const [pushing, setPushing] = useState(false);
+    const [selectedAction, setSelectedAction] = useState('Code Change');
     const [reverting, setReverting] = useState(null);
     const [revertedIds, setRevertedIds] = useState(() => {
         try {
@@ -1498,6 +1554,8 @@ export default function App() {
         const planId = await createRecord(PLANS_TABLE, {
             'Plan Name': `Plan — ${dateStr}, ${timeStr}`,
             'Plan Status': 'New',
+            'Action Type': selectedAction,
+            'Action Status': 'Pending',
             'Canvas Component': CANVAS_COMPONENT,
             'Source Interface': 'web',
         });
@@ -1507,8 +1565,13 @@ export default function App() {
             return updateRecord(FEEDBACK_TABLE, record.id, { 'Version': [planId] });
         });
         await Promise.all(updates);
-        await updateRecord(PLANS_TABLE, planId, { 'Execute': true });
+        if (selectedAction === 'Code Change') {
+            await updateRecord(PLANS_TABLE, planId, { 'Execute': true });
+        } else {
+            await updateRecord(PLANS_TABLE, planId, { 'Action Status': 'Running' });
+        }
         setCheckedIds(new Set());
+        setSelectedAction('Code Change');
         setPushing(false);
         handleRefresh();
         setActiveTab('log');
@@ -1641,17 +1704,46 @@ export default function App() {
                                 <div style={{
                                     padding: '8px 12px',
                                     borderTop: checkedIds.size > 0 ? '2px solid #2563eb' : '1px solid #e5e7eb',
-                                    flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                                    flexShrink: 0,
                                 }}>
                                     {executingPlan ? (
                                         <span style={{ fontSize: 12, color: '#d97706', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 2 }}>
                                             Applying {executingItems.length} change{executingItems.length !== 1 ? 's' : ''}<AnimatedDots />
                                         </span>
                                     ) : (
-                                        <>
-                                            <span style={{ fontSize: 12, color: checkedIds.size > 0 ? COLORS.sectionSubText : '#9ca3af', whiteSpace: 'nowrap' }}>
-                                                {checkedIds.size > 0 ? `${checkedIds.size} of ${openFeedback.length} selected` : 'Select items to push'}
-                                            </span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                                            {/* Selection count row */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: 12, color: checkedIds.size > 0 ? COLORS.sectionSubText : '#9ca3af', whiteSpace: 'nowrap' }}>
+                                                    {checkedIds.size > 0 ? `${checkedIds.size} of ${openFeedback.length} selected` : 'Select items to push'}
+                                                </span>
+                                            </div>
+                                            {/* Action type pills */}
+                                            {checkedIds.size > 0 && (
+                                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                                                    {['Code Change', 'Create Tasks', 'Generate Spec', 'Email Summary'].map(action => {
+                                                        const active = selectedAction === action;
+                                                        return (
+                                                            <button
+                                                                key={action}
+                                                                onClick={() => setSelectedAction(action)}
+                                                                style={{
+                                                                    fontSize: 11, fontWeight: active ? 600 : 500,
+                                                                    backgroundColor: active ? '#111827' : '#f9fafb',
+                                                                    color: active ? '#ffffff' : '#374151',
+                                                                    border: `1px solid ${active ? '#111827' : '#d1d5db'}`,
+                                                                    borderRadius: 999, padding: '3px 10px',
+                                                                    cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
+                                                                }}
+                                                            >
+                                                                {action === 'Code Change' ? '⚡ ' : action === 'Create Tasks' ? '✓ ' : action === 'Generate Spec' ? '📄 ' : '✉ '}
+                                                                {action}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            {/* Push button */}
                                             <button
                                                 id="push-plan-button"
                                                 onClick={handlePushPlan}
@@ -1660,16 +1752,16 @@ export default function App() {
                                                     backgroundColor: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanBg : COLORS.pushPlanDisabledBg,
                                                     color: (checkedIds.size > 0 && !pushing) ? COLORS.pushPlanText : COLORS.pushPlanDisabledText,
                                                     border: 'none', borderRadius: SIZES.inputRadius,
-                                                    padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                                                    padding: '8px 14px', fontSize: 13, fontWeight: 600,
                                                     cursor: (checkedIds.size > 0 && !pushing) ? 'pointer' : 'not-allowed',
-                                                    whiteSpace: 'nowrap', transition: 'background-color 0.12s',
+                                                    whiteSpace: 'nowrap', transition: 'background-color 0.12s', width: '100%',
                                                 }}
                                                 onMouseEnter={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanHover; }}
                                                 onMouseLeave={e => { if (checkedIds.size > 0 && !pushing) e.currentTarget.style.backgroundColor = COLORS.pushPlanBg; }}
                                             >
-                                                {pushing ? 'Pushing…' : 'Push →'}
+                                                {pushing ? 'Pushing…' : `Push — ${selectedAction}`}
                                             </button>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             </div>
